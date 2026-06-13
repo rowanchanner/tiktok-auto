@@ -150,27 +150,32 @@ def _build_caption(description: str, hashtags: list[str]) -> str:
     return caption
 
 
-def upload_video(video_data: dict, dry_run: bool = False) -> bool:
+def upload_video(video_info: dict, account_name: str = None, dry_run: bool = False) -> bool:
     """
-    Upload a video to TikTok.
+    Upload a video to TikTok using tiktokautouploader.
     
     Args:
-        video_data: Dict containing:
-            - file_path: str (path to MP4)
-            - description: str
-            - hashtags: list[str]
-            - video_id: str
-        dry_run: If True, skip the actual upload.
+        video_info (dict): The result from download_video()
+        account_name (str): The account username to use for cookies.
+        dry_run (bool): If True, skip the actual upload.
     
-    Returns True if upload succeeded, False otherwise.
+    Returns:
+        bool: True if successful, False otherwise.
     """
-    file_path = video_data["file_path"]
-    description = video_data.get("description", "")
-    hashtags = video_data.get("hashtags", [])
+    if not video_info:
+        logger.error("No video info provided for upload")
+        return False
+        
+    if not account_name:
+        account_name = getattr(config, "TIKTOK_ACCOUNT", "rowanoutdoors")
+
+    video_path = video_info.get('file_path')
+    description = video_info.get('description', '')
+    hashtags = video_info.get("hashtags", [])
 
     # Validate file exists
-    if not os.path.exists(file_path):
-        logger.error(f"❌ Video file not found: {file_path}")
+    if not os.path.exists(video_path):
+        logger.error(f"❌ Video file not found: {video_path}")
         return False
 
     # Build caption (description without hashtags — hashtags are passed separately)
@@ -186,7 +191,7 @@ def upload_video(video_data: dict, dry_run: bool = False) -> bool:
 
     if dry_run:
         logger.info("🏃 DRY RUN — skipping actual upload")
-        logger.info(f"   Would upload: {file_path}")
+        logger.info(f"   Would upload: {video_path}")
         return True
 
     try:
@@ -196,9 +201,9 @@ def upload_video(video_data: dict, dry_run: bool = False) -> bool:
         logger.info(f"📤 Uploading to TikTok...")
         
         result = upload_tiktok(
-            video=file_path,
+            video=video_path,
             description=clean_desc,
-            accountname=config.TIKTOK_ACCOUNT,
+            accountname=account_name,
             hashtags=tag_list if tag_list else None,
             copyrightcheck=False,
             headless=True,

@@ -15,6 +15,8 @@ import logging
 import sys
 import time
 import io
+import os
+import random
 from datetime import datetime, timezone
 
 # Fix Windows console encoding for emoji/unicode in log messages
@@ -37,7 +39,7 @@ from uploader import upload_video, cleanup_video
 # ─── Logging Setup ───────────────────────────────────────────────────────────
 
 def setup_logging(level: str = None):
-    """Configure logging with colored-ish console output."""
+    """Configure logging with colored-ish console output and file output."""
     log_level = getattr(logging, (level or config.LOG_LEVEL).upper(), logging.INFO)
     
     formatter = logging.Formatter(
@@ -45,12 +47,21 @@ def setup_logging(level: str = None):
         datefmt="%H:%M:%S",
     )
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
+    # Console Handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    
+    # File Handler for Live Web Logs
+    log_file = os.path.join(config.BASE_DIR, "bot.log")
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
-    root_logger.addHandler(handler)
+    # Clear existing handlers to prevent duplicates if called multiple times
+    root_logger.handlers = []
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
 
     # Quiet down noisy libraries
     logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -63,48 +74,49 @@ logger = logging.getLogger("main")
 
 # ─── Pipeline ────────────────────────────────────────────────────────────────
 
-def run_pipeline(dry_run: bool = False) -> bool:
-    """
-    Execute one full cycle: discover → download → upload.
+def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
+    """Run the complete discovery -> download -> upload pipeline."""
+    logger.info("============================================================")
     
-    Returns True if a video was successfully posted (or would be in dry-run).
-    """
-    logger.info("=" * 60)
-    logger.info("🚀 Starting Auto TikTok Poster pipeline")
-    logger.info("=" * 60)
-
-    # Check daily post limit
+    if not active_accounts:
+        logger.warning("No active TikTok accounts found! Please upload a cookie file in settings.")
+        return False
+        
     posts_today = tracker.get_posted_count_today()
-    if posts_today >= config.MAX_POSTS_PER_DAY:
-        logger.warning(
-            f"⚠️  Daily limit reached ({posts_today}/{config.MAX_POSTS_PER_DAY}). "
-            f"Skipping this cycle."
-        )
+    max_posts = getattr(config, "MAX_POSTS_PER_DAY", 15)
+    
+    logger.info(f"📊 Posts today: {posts_today}/{max_posts}")
+    if posts_today >= max_posts:
+        logger.info("Reached maximum posts for today. Sleeping until tomorrow.")
         return False
 
-    logger.info(f"📊 Posts today: {posts_today}/{config.MAX_POSTS_PER_DAY}")
-
-    # Step 1: Discover
     logger.info("")
     logger.info("─── Step 1: Discovering viral movie clips ───")
+    # Discover videos
     video_info = discover_video()
     if not video_info:
-        logger.error("❌ Discovery failed — no eligible videos found")
+        logger.warning("No eligible videos found during discovery.")
         return False
 
-    # Step 2: Download
+    # Download
     logger.info("")
     logger.info("─── Step 2: Downloading video ───")
     download_result = download_video(video_info)
+    
     if not download_result:
-        logger.error("❌ Download failed")
+        logger.error("Pipeline failed at download step.")
         return False
 
-    # Step 3: Upload
+    # Upload
     logger.info("")
     logger.info("─── Step 3: Uploading to TikTok ───")
-    success = upload_video(download_result, dry_run=dry_run)
-
+    
+    # Pick a random active account to post to
+    account_name = random.choice(active_accounts)
+    logger.info(f"Posting to account: @{account_name}")
+    
+    success = upload_video(download_result, account_name=account_name, dry_run=dry_run)
+    
     if success:
         # Track the post
         tracker.mark_posted(

@@ -61,5 +61,32 @@
     {% else %}
     <p style="color: var(--text-muted); margin-top: 1rem;">No recent posts found.</p>
     {% endif %}
+
+    <h2 style="margin-top: 2rem;">Live Logs</h2>
+    <div style="background: #000; padding: 1rem; border-radius: 0.5rem; border: 1px solid #333; margin-top: 1rem; overflow-x: auto;">
+        <pre id="log-viewer" style="color: #0f0; font-family: monospace; font-size: 0.875rem; margin: 0; white-space: pre-wrap; min-height: 200px; max-height: 400px; overflow-y: auto;">Loading logs...</pre>
+    </div>
 </div>
+
+<script>
+    function fetchLogs() {
+        fetch('/logs_api')
+            .then(response => response.text())
+            .then(text => {
+                const viewer = document.getElementById('log-viewer');
+                // Only scroll to bottom if user is already near the bottom
+                const isScrolledToBottom = viewer.scrollHeight - viewer.clientHeight <= viewer.scrollTop + 50;
+                viewer.textContent = text;
+                if (isScrolledToBottom) {
+                    viewer.scrollTop = viewer.scrollHeight;
+                }
+            })
+            .catch(err => console.error("Error fetching logs:", err));
+    }
+    
+    // Fetch logs every 2 seconds
+    setInterval(fetchLogs, 2000);
+    // Initial fetch
+    fetchLogs();
+</script>
 {% endblock %}

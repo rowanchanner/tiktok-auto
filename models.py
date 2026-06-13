@@ -19,3 +19,9 @@ class PostHistory(db.Model):
     description = db.Column(db.Text)
     hashtags = db.Column(db.Text)
     posted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TikTokAccount(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    cookie_file = db.Column(db.String(255), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)

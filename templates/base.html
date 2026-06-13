@@ -223,6 +223,41 @@
         .badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
         .badge-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 1rem;
+            }
+            .brand {
+                margin-bottom: 1rem;
+            }
+            .nav-links {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.5rem;
+            }
+            .nav-links a {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+            }
+            .user-profile {
+                margin-top: 1rem;
+                justify-content: center;
+            }
+            .main-content {
+                padding: 1rem;
+            }
+            .glass-card {
+                padding: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
