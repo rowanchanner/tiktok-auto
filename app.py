@@ -3,6 +3,7 @@ from flask import Flask, render_template, redirect, url_for, session, request
 from authlib.integrations.flask_client import OAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, Settings, PostHistory
 import main as bot_main
@@ -10,6 +11,9 @@ import main as bot_main
 load_dotenv()
 
 app = Flask(__name__)
+# Fix for Render's reverse proxy to ensure HTTPS URLs are generated
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
 
 # Database setup
@@ -81,8 +85,6 @@ def login():
 @app.route('/google_login')
 def google_login():
     redirect_uri = url_for('authorize', _external=True)
-    if 'onrender.com' in request.host:
-        redirect_uri = redirect_uri.replace('http://', 'https://')
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/authorize')
