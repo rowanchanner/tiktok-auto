@@ -1,24 +1,17 @@
-FROM python:3.10-slim
-
-# Install system dependencies including ffmpeg for yt-dlp
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    wget \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
+FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
 
 WORKDIR /app
 
-# Copy requirements and install
+# Install ffmpeg for yt-dlp (Playwright image already has all browser deps)
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install phantomwright browser and its system dependencies
+# Install phantomwright browser
 RUN python -m phantomwright_driver install chromium
-RUN python -m phantomwright_driver install-deps
 
-# Copy the rest of the project
 COPY . .
 
-# Run the bot in auto mode
+# Run the bot
 CMD ["python", "main.py", "--auto"]
