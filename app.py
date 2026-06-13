@@ -131,14 +131,18 @@ def dashboard():
     if not user:
         return redirect(url_for('login'))
         
-    settings = Settings.query.first()
-    recent_posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(5).all()
-    
-    # Get next run time
-    job = scheduler.get_job('tiktok_job')
-    next_run = job.next_run_time if job else None
-    
-    return render_template('dashboard.html', user=user, settings=settings, next_run=next_run, recent_posts=recent_posts)
+    try:
+        settings = Settings.query.first()
+        recent_posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(5).all()
+        
+        # Get next run time
+        job = scheduler.get_job('tiktok_job')
+        next_run = job.next_run_time if job else None
+        
+        return render_template('dashboard.html', user=user, settings=settings, next_run=next_run, recent_posts=recent_posts)
+    except Exception as e:
+        import traceback
+        return f"CRASH IN DASHBOARD:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 from werkzeug.utils import secure_filename
 
@@ -148,80 +152,91 @@ def settings():
     if not user:
         return redirect(url_for('login'))
         
-    settings_obj = Settings.query.first()
-    accounts = TikTokAccount.query.all()
-    
-    if request.method == 'POST':
-        if 'upload_cookie' in request.form:
-            # Handle cookie upload
-            file = request.files.get('cookie_file')
-            username = request.form.get('account_username')
-            if file and username and file.filename.endswith('.json'):
-                filename = f"CookieFile{username}.json"
-                file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-                file.save(file_path)
+    try:
+        settings_obj = Settings.query.first()
+        accounts = TikTokAccount.query.all()
+        
+        if request.method == 'POST':
+            if 'upload_cookie' in request.form:
+                # Handle cookie upload
+                file = request.files.get('cookie_file')
+                username = request.form.get('account_username')
+                if file and username and file.filename.endswith('.json'):
+                    filename = f"CookieFile{username}.json"
+                    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+                    file.save(file_path)
+                    
+                    # Update or create account in DB
+                    account = TikTokAccount.query.filter_by(username=username).first()
+                    if not account:
+                        account = TikTokAccount(username=username, cookie_file=filename, is_active=True)
+                        db.session.add(account)
+                    db.session.commit()
+            elif 'delete_account' in request.form:
+                account_id = request.form.get('account_id')
+                account = TikTokAccount.query.get(account_id)
+                if account:
+                    try:
+                        os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), account.cookie_file))
+                    except:
+                        pass
+                    db.session.delete(account)
+                    db.session.commit()
+            elif 'toggle_account' in request.form:
+                account_id = request.form.get('account_id')
+                account = TikTokAccount.query.get(account_id)
+                if account:
+                    account.is_active = not account.is_active
+                    db.session.commit()
+            else:
+                settings_obj.post_interval_hours = int(request.form.get('interval', 3))
+                settings_obj.max_posts_per_day = int(request.form.get('max_posts', 15))
+                settings_obj.hashtags = request.form.get('hashtags', '')
+                settings_obj.extra_hashtags = request.form.get('extra_hashtags', '')
+                settings_obj.min_views = int(request.form.get('min_views', 500000))
+                settings_obj.is_running = 'is_running' in request.form
                 
-                # Update or create account in DB
-                account = TikTokAccount.query.filter_by(username=username).first()
-                if not account:
-                    account = TikTokAccount(username=username, cookie_file=filename, is_active=True)
-                    db.session.add(account)
                 db.session.commit()
-        elif 'delete_account' in request.form:
-            account_id = request.form.get('account_id')
-            account = TikTokAccount.query.get(account_id)
-            if account:
-                try:
-                    os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), account.cookie_file))
-                except:
-                    pass
-                db.session.delete(account)
-                db.session.commit()
-        elif 'toggle_account' in request.form:
-            account_id = request.form.get('account_id')
-            account = TikTokAccount.query.get(account_id)
-            if account:
-                account.is_active = not account.is_active
-                db.session.commit()
-        else:
-            settings_obj.post_interval_hours = int(request.form.get('interval', 3))
-            settings_obj.max_posts_per_day = int(request.form.get('max_posts', 15))
-            settings_obj.hashtags = request.form.get('hashtags', '')
-            settings_obj.extra_hashtags = request.form.get('extra_hashtags', '')
-            settings_obj.min_views = int(request.form.get('min_views', 500000))
-            settings_obj.is_running = 'is_running' in request.form
+                
+                # Reschedule job with new interval
+                scheduler.reschedule_job('tiktok_job', trigger='interval', hours=settings_obj.post_interval_hours)
             
-            db.session.commit()
+            return redirect(url_for('settings'))
             
-            # Reschedule job with new interval
-            scheduler.reschedule_job('tiktok_job', trigger='interval', hours=settings_obj.post_interval_hours)
-        
-        return redirect(url_for('settings'))
-        
-    return render_template('settings.html', settings=settings_obj, user=user, accounts=accounts)
+        return render_template('settings.html', settings=settings_obj, user=user, accounts=accounts)
+    except Exception as e:
+        import traceback
+        return f"CRASH IN SETTINGS:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 @app.route('/history')
 def history():
-    user = session.get('user')
-    if not user:
-        return redirect(url_for('login'))
-    posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).all()
-    return render_template('history.html', posts=posts, user=user)
+    try:
+        user = session.get('user')
+        if not user:
+            return redirect(url_for('login'))
+        posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).all()
+        return render_template('history.html', posts=posts, user=user)
+    except Exception as e:
+        import traceback
+        return f"CRASH IN HISTORY:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 @app.route('/run_now', methods=['POST'])
 def run_now():
-    user = session.get('user')
-    if not user:
-        return redirect(url_for('login'))
-        
     try:
+        user = session.get('user')
+        if not user:
+            return redirect(url_for('login'))
+            
         from datetime import timezone
         job = scheduler.get_job('tiktok_job')
         if job:
             job.modify(next_run_time=datetime.now(timezone.utc))
+            
+        return redirect(url_for('dashboard'))
     except Exception as e:
-        return f"Error scheduling job: {str(e)}", 500
-        
+        import traceback
+        return f"CRASH IN RUN_NOW:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
+
 @app.route('/logs_api')
 def logs_api():
     user = session.get('user')
