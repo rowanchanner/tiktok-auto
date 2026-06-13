@@ -29,11 +29,7 @@ google = oauth.register(
     name='google',
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    access_token_url='https://accounts.google.com/o/oauth2/token',
-    access_token_params=None,
-    authorize_url='https://accounts.google.com/o/oauth2/auth',
-    authorize_params=None,
-    api_base_url='https://www.googleapis.com/oauth2/v1/',
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'},
 )
 
@@ -84,8 +80,13 @@ def login():
 
 @app.route('/google_login')
 def google_login():
-    redirect_uri = url_for('authorize', _external=True)
-    return google.authorize_redirect(redirect_uri)
+    try:
+        # Force HTTPS redirect URI unless testing locally
+        scheme = 'http' if request.host.startswith('localhost') or request.host.startswith('127.0.0.1') else 'https'
+        redirect_uri = url_for('authorize', _external=True, _scheme=scheme)
+        return google.authorize_redirect(redirect_uri)
+    except Exception as e:
+        return f"Error during Google Login: {str(e)}", 500
 
 @app.route('/authorize')
 def authorize():
