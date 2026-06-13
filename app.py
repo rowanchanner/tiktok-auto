@@ -63,6 +63,21 @@ def initialize_db():
     # Setup DB on first request if it doesn't exist
     app.before_request_funcs[None].remove(initialize_db)
     db.create_all()
+    
+    # Restore cookies from persistent disk on Render
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, 'data')
+    if os.path.exists(data_dir):
+        import shutil
+        for f in os.listdir(data_dir):
+            if f.startswith("CookieFile") and f.endswith(".json"):
+                shutil.copy(os.path.join(data_dir, f), os.path.join(base_dir, f))
+                
+    # Add default account if none exist
+    if TikTokAccount.query.count() == 0:
+        default_acc = TikTokAccount(username="rowanoutdoors", cookie_file="CookieFilerowanoutdoors.json", is_active=True)
+        db.session.add(default_acc)
+        db.session.commit()
     if not Settings.query.first():
         db.session.add(Settings())
         db.session.commit()
@@ -166,6 +181,12 @@ def settings():
                     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
                     file.save(file_path)
                     
+                    # Also save to persistent disk if it exists
+                    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+                    if os.path.exists(data_dir):
+                        import shutil
+                        shutil.copy(file_path, os.path.join(data_dir, filename))
+                    
                     # Update or create account in DB
                     account = TikTokAccount.query.filter_by(username=username).first()
                     if not account:
@@ -177,7 +198,11 @@ def settings():
                 account = TikTokAccount.query.get(account_id)
                 if account:
                     try:
-                        os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), account.cookie_file))
+                        base_dir = os.path.dirname(os.path.abspath(__file__))
+                        os.remove(os.path.join(base_dir, account.cookie_file))
+                        data_dir = os.path.join(base_dir, 'data')
+                        if os.path.exists(data_dir):
+                            os.remove(os.path.join(data_dir, account.cookie_file))
                     except:
                         pass
                     db.session.delete(account)
