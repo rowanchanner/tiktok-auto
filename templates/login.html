@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    body {
+        align-items: center;
+        justify-content: center;
+    }
+    .main-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .login-card {
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+    .login-icon {
+        font-size: 3rem;
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+    }
+    .google-btn {
+        background: white;
+        color: #333;
+        font-weight: 600;
+        width: 100%;
+        justify-content: center;
+        padding: 0.75rem;
+        margin-top: 2rem;
+        border-radius: 99px;
+    }
+    .google-btn img {
+        width: 18px;
+        height: 18px;
+    }
+</style>
+
+<div class="glass-card login-card">
+    <i class="fa-solid fa-robot login-icon"></i>
+    <h2>Auto TikTok Poster</h2>
+    <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 0.9rem;">
+        Secure dashboard access restricted to authorized administrators.
+    </p>
+
+    <a href="/google_login" class="btn google-btn">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G">
+        Continue with Google
+    </a>
+</div>
+{% endblock %}

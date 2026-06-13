@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Dashboard</h1>
+        <div>
+            {% if settings and settings.is_running %}
+                <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Bot Active</span>
+            {% else %}
+                <span class="badge badge-danger"><i class="fa-solid fa-circle-pause"></i> Bot Paused</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Next Scheduled Post</div>
+            <div style="font-size: 1.25rem; font-weight: 600;">
+                {% if next_run %}
+                    {{ next_run.strftime('%Y-%m-%d %H:%M:%S') }}
+                {% else %}
+                    Not scheduled
+                {% endif %}
+            </div>
+            <form action="/run_now" method="POST" style="margin-top: 1rem;">
+                <button type="submit" class="btn" style="width: 100%; justify-content: center;"><i class="fa-solid fa-bolt"></i> Run Now</button>
+            </form>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Interval</div>
+            <div style="font-size: 1.25rem; font-weight: 600;">Every {{ settings.post_interval_hours if settings else 3 }} hours</div>
+        </div>
+    </div>
+
+    <h2>Recent Activity</h2>
+    {% if recent_posts %}
+    <div style="overflow-x: auto; margin-top: 1rem;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Video ID</th>
+                    <th>Hashtags</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in recent_posts %}
+                <tr>
+                    <td style="color: var(--text-muted); font-size: 0.875rem;">{{ post.posted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ post.video_id }}</td>
+                    <td><span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">{{ post.hashtags[:30] }}{% if post.hashtags|length > 30 %}...{% endif %}</span></td>
+                    <td><a href="https://www.tiktok.com/video/{{ post.video_id }}" target="_blank" style="color: var(--primary-color);"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-muted); margin-top: 1rem;">No recent posts found.</p>
+    {% endif %}
+</div>
+{% endblock %}

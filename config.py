@@ -1,7 +1,6 @@
 """
 Auto TikTok Poster — Configuration
 ====================================
-Edit these settings to customize behavior.
 """
 
 import os
@@ -13,47 +12,51 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 COOKIES_FILE = os.path.join(BASE_DIR, "cookies.txt")
 POSTED_LOG = os.path.join(DATA_DIR, "posted.json")
 
-# ─── TikTok Account ─────────────────────────────────────────────────────────
-# Your TikTok username (without the @ symbol)
+# ─── Constants ───────────────────────────────────────────────────────────────
 TIKTOK_ACCOUNT = "rowanoutdoors"
-
-# ─── Discovery ───────────────────────────────────────────────────────────────
-# Hashtags to search for movie clips (without the # symbol)
-HASHTAGS = [
-    "movieclips",
-    "moviescenes",
-    "filmtok",
-    "cinemascenes",
-    "movietok",
-    "filmclips",
-    "moviemoments",
-]
-
-# Minimum view count to consider a video "viral"
-MIN_VIEWS = 500_000
-
-# Maximum video duration in seconds (TikTok allows up to 10 min, but shorter clips repost better)
 MAX_DURATION_SECONDS = 180
-
-# Number of videos to fetch per hashtag search
 FETCH_COUNT = 30
-
-# ─── Posting ─────────────────────────────────────────────────────────────────
-# Interval between auto-posts in hours (only used with --auto flag)
-POST_INTERVAL_HOURS = 3
-
-# Maximum posts per day (safety limit)
-MAX_POSTS_PER_DAY = 15
-
-# ─── Upload Settings ────────────────────────────────────────────────────────
-# Add extra hashtags to every post (in addition to the original ones)
-EXTRA_HASHTAGS = []  # e.g., ["#fyp", "#viral", "#foryou"]
-
-# Whether to delete the downloaded video after successful upload
 CLEANUP_AFTER_UPLOAD = True
-
-# ─── TikWM API ───────────────────────────────────────────────────────────────
 TIKWM_API_BASE = "https://www.tikwm.com/api"
+LOG_LEVEL = "INFO"
 
-# ─── Logging ─────────────────────────────────────────────────────────────────
-LOG_LEVEL = "INFO"  # DEBUG, INFO, WARNING, ERROR
+# ─── Dynamic DB Settings ─────────────────────────────────────────────────────
+# We use Python's module-level __getattr__ to dynamically fetch these from the database
+# when they are accessed, so that UI changes take effect immediately without restarting.
+
+def __getattr__(name):
+    try:
+        from models import Settings
+        from flask import current_app
+        # If we have an active app context, query the DB
+        if current_app:
+            s = Settings.query.first()
+            if not s:
+                raise ValueError("No settings found")
+            
+            if name == "POST_INTERVAL_HOURS":
+                return s.post_interval_hours
+            elif name == "MAX_POSTS_PER_DAY":
+                return s.max_posts_per_day
+            elif name == "HASHTAGS":
+                return [h.strip() for h in s.hashtags.split(',')] if s.hashtags else []
+            elif name == "EXTRA_HASHTAGS":
+                return [h.strip() for h in s.extra_hashtags.split(',')] if s.extra_hashtags else []
+            elif name == "MIN_VIEWS":
+                return s.min_views
+    except Exception:
+        pass # Fallback to defaults if no DB or no app context
+
+    # Defaults
+    if name == "POST_INTERVAL_HOURS":
+        return 3
+    elif name == "MAX_POSTS_PER_DAY":
+        return 15
+    elif name == "HASHTAGS":
+        return ["movieclips", "moviescenes", "filmtok", "cinemascenes", "movietok", "filmclips", "moviemoments"]
+    elif name == "EXTRA_HASHTAGS":
+        return []
+    elif name == "MIN_VIEWS":
+        return 500000
+
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

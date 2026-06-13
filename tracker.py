@@ -1,85 +1,39 @@
-"""
-Auto TikTok Poster — Duplicate Tracker
-========================================
-Tracks which videos have been posted to avoid duplicates.
-Stores data in a JSON file at data/posted.json.
-"""
+from models import db, PostHistory, Settings
+from datetime import datetime
 
-import json
-import os
-import logging
-from datetime import datetime, timezone
-
-import config
-
-logger = logging.getLogger(__name__)
-
-
-def _ensure_data_dir():
-    """Create the data directory if it doesn't exist."""
-    os.makedirs(config.DATA_DIR, exist_ok=True)
-
-
-def _load_posted() -> list[dict]:
-    """Load the list of previously posted videos from disk."""
-    if not os.path.exists(config.POSTED_LOG):
-        return []
-    try:
-        with open(config.POSTED_LOG, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        logger.warning(f"Could not read posted log, starting fresh: {e}")
-        return []
-
-
-def _save_posted(entries: list[dict]):
-    """Save the posted log to disk."""
-    _ensure_data_dir()
-    with open(config.POSTED_LOG, "w", encoding="utf-8") as f:
-        json.dump(entries, f, indent=2, ensure_ascii=False)
-
-
-def is_posted(video_id: str) -> bool:
-    """Check if a video ID has already been posted."""
-    entries = _load_posted()
-    posted_ids = {entry["video_id"] for entry in entries}
-    return video_id in posted_ids
-
-
-def mark_posted(video_id: str, video_url: str, description: str = "", hashtags: list[str] = None):
-    """Record a video as posted with timestamp and metadata."""
-    entries = _load_posted()
-    entry = {
-        "video_id": video_id,
-        "video_url": video_url,
-        "description": description[:200] if description else "",
-        "hashtags": hashtags or [],
-        "posted_at": datetime.now(timezone.utc).isoformat(),
-    }
-    entries.append(entry)
-    _save_posted(entries)
-    logger.info(f"✅ Marked video {video_id} as posted")
-
-
-def get_posted_count_today() -> int:
-    """Count how many videos have been posted today (UTC)."""
-    entries = _load_posted()
-    today = datetime.now(timezone.utc).date().isoformat()
+def get_posted_count_today():
+    today = datetime.utcnow().date()
+    # Count how many posts happened today
+    # We query all and filter in Python for SQLite compatibility, or use SQLAlchemy func
+    posts = PostHistory.query.all()
     count = 0
-    for entry in entries:
-        posted_date = entry.get("posted_at", "")[:10]  # Extract YYYY-MM-DD
-        if posted_date == today:
+    for p in posts:
+        if p.posted_at and p.posted_at.date() == today:
             count += 1
     return count
 
+def mark_posted(video_id, video_url="", description="", hashtags=[]):
+    new_post = PostHistory(
+        video_id=video_id,
+        video_url=video_url,
+        description=description,
+        hashtags=",".join(hashtags) if hashtags else ""
+    )
+    db.session.add(new_post)
+    db.session.commit()
 
-def get_all_posted_ids() -> set[str]:
-    """Return a set of all previously posted video IDs."""
-    entries = _load_posted()
-    return {entry["video_id"] for entry in entries}
+def has_been_posted(video_id):
+    post = PostHistory.query.filter_by(video_id=video_id).first()
+    return post is not None
 
-
-def get_post_history(limit: int = 20) -> list[dict]:
-    """Return the most recent posted entries."""
-    entries = _load_posted()
-    return entries[-limit:]
+def get_post_history(limit=20):
+    posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(limit).all()
+    return [
+        {
+            "video_id": p.video_id,
+            "video_url": p.video_url,
+            "description": p.description,
+            "hashtags": p.hashtags.split(",") if p.hashtags else [],
+            "posted_at": p.posted_at.isoformat()
+        } for p in posts
+    ]
