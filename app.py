@@ -236,6 +236,8 @@ def settings():
                 settings_obj.extra_hashtags = request.form.get('extra_hashtags', '')
                 settings_obj.min_views = int(request.form.get('min_views', 500000))
                 settings_obj.is_running = 'is_running' in request.form
+                settings_obj.proxy_url = request.form.get('proxy_url', '')
+                settings_obj.discord_webhook_url = request.form.get('discord_webhook_url', '')
                 
                 db.session.commit()
                 

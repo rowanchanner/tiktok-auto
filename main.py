@@ -247,8 +247,9 @@ Examples:
     setup_logging("DEBUG" if args.debug else None)
 
     # We need a Flask app context to use the database locally
-    from app import app
+    from app import app, db
     app.app_context().push()
+    db.create_all()
 
     # Print banner
     print()

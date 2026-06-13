@@ -230,13 +230,18 @@ def upload_video(video_info: dict, account_name: str = None, dry_run: bool = Fal
 
         logger.info(f"📤 Uploading to TikTok...")
         
+        # Format proxy for tiktokautouploader if provided
+        proxy_url = getattr(config, "PROXY_URL", "")
+        proxy_dict = {"server": proxy_url} if proxy_url else None
+
         result = upload_tiktok(
             video=video_path,
             description=clean_desc,
             accountname=account_name,
             hashtags=tag_list if tag_list else None,
+            proxy=proxy_dict,
             copyrightcheck=False,
-            headless=True,
+            headless=not (os.name == 'nt'),  # Visible on Windows, headless on Linux
             suppressprint=False,
             stealth=True,
         )

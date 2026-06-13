@@ -1,0 +1,37 @@
+00:40:51 │ INFO    │ main         │ ============================================================
+00:40:51 │ WARNING │ main         │ No active TikTok accounts found! Please upload a cookie file in settings.
+00:42:00 │ INFO    │ main         │ ============================================================
+00:43:08 │ INFO    │ main         │ ============================================================
+00:43:42 │ INFO    │ main         │ ============================================================
+00:43:42 │ INFO    │ main         │ 📊 Posts today: 0/15
+00:43:42 │ INFO    │ main         │ 
+00:43:42 │ INFO    │ main         │ ─── Step 1: Discovering viral movie clips ───
+00:43:43 │ INFO    │ discover     │ Found 26 videos for #cinemascenes
+00:43:43 │ INFO    │ discover     │ Filtered to 8 eligible videos (from 26 total)
+00:43:44 │ INFO    │ discover     │ Found 30 videos for #filmtok
+00:43:44 │ INFO    │ discover     │ Filtered to 2 eligible videos (from 30 total)
+00:43:44 │ INFO    │ discover     │ 🎬 Selected: https://www.tiktok.com/@movieworld0414/video/7600689167726628117
+   Author: @movieworld0414
+   Views: 1,967,893
+   Duration: 12s
+   Description: This scene ❤️‍🔥  🎬 Movie: Footlose (2011).  #fyp #edit #viral #movie #dance ...
+00:43:44 │ INFO    │ main         │ 
+00:43:44 │ INFO    │ main         │ ─── Step 2: Downloading video ───
+00:43:44 │ INFO    │ downloader   │ ⬇️  Downloading with yt-dlp: https://www.tiktok.com/@movieworld0414/video/7600689167726628117
+00:43:46 │ INFO    │ downloader   │ ✅ Downloaded: C:\Users\churc\OneDrive\Desktop\nope\downloads\7600689167726628117.mp4 (1.5 MB)
+00:43:47 │ INFO    │ downloader   │ 📋 Metadata extracted:
+   Description: This scene ❤️‍🔥  🎬 Movie: Footlose (2011).  #fyp #edit #viral #movie #dance ...
+   Hashtags: #fyp #edit #viral #movie #dance
+   Music: original sound — 𝓍𝓆𝓋𝓊𝓅𝒾𝓍❥
+00:43:47 │ INFO    │ main         │ 
+00:43:47 │ INFO    │ main         │ ─── Step 3: Uploading to TikTok ───
+00:43:47 │ INFO    │ main         │ Posting to account: @rowanoutdoors
+00:43:47 │ INFO    │ uploader     │ 📝 Caption: This scene ❤️‍🔥 🎬 Movie: Footlose (2011).
+00:43:47 │ INFO    │ uploader     │ 🏷️  Hashtags: ['fyp', 'edit', 'viral', 'movie', 'dance']
+00:43:47 │ INFO    │ uploader     │ 📤 Uploading to TikTok...
+00:44:35 │ INFO    │ uploader     │ ✅ Upload successful! Result: Completed
+00:44:35 │ INFO    │ uploader     │ 🗑️  Cleaned up: C:\Users\churc\OneDrive\Desktop\nope\downloads\7600689167726628117.mp4
+00:44:35 │ INFO    │ main         │ 
+00:44:35 │ INFO    │ main         │ ============================================================
+00:44:35 │ INFO    │ main         │ 🎉 POSTED SUCCESSFULLY
+00:44:35 │ INFO    │ main         │ ============================================================

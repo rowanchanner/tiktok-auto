@@ -44,6 +44,10 @@ def __getattr__(name):
                 return [h.strip() for h in s.extra_hashtags.split(',')] if s.extra_hashtags else []
             elif name == "MIN_VIEWS":
                 return s.min_views
+            elif name == "PROXY_URL":
+                return s.proxy_url
+            elif name == "DISCORD_WEBHOOK_URL":
+                return s.discord_webhook_url
     except Exception:
         pass # Fallback to defaults if no DB or no app context
 
@@ -58,5 +62,9 @@ def __getattr__(name):
         return []
     elif name == "MIN_VIEWS":
         return 500000
+    elif name == "PROXY_URL":
+        return ""
+    elif name == "DISCORD_WEBHOOK_URL":
+        return ""
 
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
