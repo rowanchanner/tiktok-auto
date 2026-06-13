@@ -1,0 +1,27 @@
+providers = ["python"]
+
+[phases.setup]
+aptPkgs = [
+    "ffmpeg",
+    "libgconf-2-4",
+    "libatk1.0-0",
+    "libatk-bridge2.0-0",
+    "libgdk-pixbuf2.0-0",
+    "libgtk-3-0",
+    "libgbm-dev",
+    "libnss3-dev",
+    "libxss-dev",
+    "libasound2",
+    "libx11-xcb1"
+]
+
+[phases.install]
+cmds = [
+    "python -m venv /opt/venv",
+    ". /opt/venv/bin/activate",
+    "pip install -r requirements.txt",
+    "python -m phantomwright_driver install chromium"
+]
+
+[start]
+cmd = "bash run.sh"
