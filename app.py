@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from models import db, Settings, PostHistory
+from models import db, Settings, PostHistory, TikTokAccount
 import main as bot_main
 
 load_dotenv()
