@@ -13,5 +13,5 @@ RUN python -m phantomwright_driver install chromium
 
 COPY . .
 
-# Run the bot in auto mode
-CMD ["python", "main.py", "--auto"]
+# Run the web dashboard using gunicorn
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
