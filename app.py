@@ -215,9 +215,10 @@ def run_now():
         return redirect(url_for('login'))
         
     try:
+        from datetime import timezone
         job = scheduler.get_job('tiktok_job')
         if job:
-            job.modify(next_run_time=datetime.now())
+            job.modify(next_run_time=datetime.now(timezone.utc))
     except Exception as e:
         return f"Error scheduling job: {str(e)}", 500
         
