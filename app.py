@@ -90,15 +90,24 @@ def google_login():
 
 @app.route('/authorize')
 def authorize():
-    token = google.authorize_access_token()
-    resp = google.get('userinfo')
-    user_info = resp.json()
-    
-    if user_info.get('email') != ALLOWED_EMAIL:
-        return "Unauthorized. This dashboard is locked to a specific account.", 403
+    try:
+        token = google.authorize_access_token()
+        # With OpenID Connect, userinfo might be inside the token
+        user_info = token.get('userinfo')
         
-    session['user'] = user_info
-    return redirect(url_for('dashboard'))
+        if not user_info:
+            # Fallback using absolute URL since api_base_url was removed
+            resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo')
+            user_info = resp.json()
+            
+        if user_info.get('email') != ALLOWED_EMAIL:
+            return "Unauthorized. This dashboard is locked to a specific account.", 403
+            
+        session['user'] = user_info
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        import traceback
+        return f"Error during authorization: {str(e)}<br><br>Traceback:<br><pre>{traceback.format_exc()}</pre>", 500
 
 @app.route('/logout')
 def logout():
