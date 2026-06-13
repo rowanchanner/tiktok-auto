@@ -81,8 +81,8 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
     logger.info("============================================================")
     
     if not active_accounts:
-        logger.warning("No active TikTok accounts found! Please upload a cookie file in settings.")
-        return False
+        # Default to config account if running locally from CLI
+        active_accounts = [getattr(config, "TIKTOK_ACCOUNT", "rowanoutdoors")]
         
     posts_today = tracker.get_posted_count_today()
     max_posts = getattr(config, "MAX_POSTS_PER_DAY", 15)
@@ -245,6 +245,10 @@ Examples:
 
     # Setup logging
     setup_logging("DEBUG" if args.debug else None)
+
+    # We need a Flask app context to use the database locally
+    from app import app
+    app.app_context().push()
 
     # Print banner
     print()
