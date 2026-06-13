@@ -66,7 +66,7 @@ def initialize_db():
 # --- Auth Middleware ---
 @app.before_request
 def require_login():
-    allowed_routes = ['login', 'authorize', 'static']
+    allowed_routes = ['login', 'google_login', 'authorize', 'static']
     if request.endpoint not in allowed_routes and 'user' not in session:
         return redirect(url_for('login'))
 
@@ -107,6 +107,10 @@ def logout():
 
 @app.route('/')
 def dashboard():
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+        
     settings = Settings.query.first()
     recent_posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(5).all()
     
@@ -114,10 +118,14 @@ def dashboard():
     job = scheduler.get_job('tiktok_job')
     next_run = job.next_run_time if job else None
     
-    return render_template('dashboard.html', user=session['user'], settings=settings, next_run=next_run, recent_posts=recent_posts)
+    return render_template('dashboard.html', user=user, settings=settings, next_run=next_run, recent_posts=recent_posts)
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+        
     settings_obj = Settings.query.first()
     if request.method == 'POST':
         settings_obj.post_interval_hours = int(request.form.get('interval', 3))
@@ -134,12 +142,15 @@ def settings():
         
         return redirect(url_for('settings'))
         
-    return render_template('settings.html', settings=settings_obj, user=session['user'])
+    return render_template('settings.html', settings=settings_obj, user=user)
 
 @app.route('/history')
 def history():
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
     posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).all()
-    return render_template('history.html', posts=posts, user=session['user'])
+    return render_template('history.html', posts=posts, user=user)
 
 @app.route('/run_now', methods=['POST'])
 def run_now():
