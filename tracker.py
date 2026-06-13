@@ -26,6 +26,10 @@ def has_been_posted(video_id):
     post = PostHistory.query.filter_by(video_id=video_id).first()
     return post is not None
 
+def get_all_posted_ids():
+    posts = PostHistory.query.all()
+    return [p.video_id for p in posts]
+
 def get_post_history(limit=20):
     posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(limit).all()
     return [
