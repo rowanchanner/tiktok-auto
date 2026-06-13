@@ -13,6 +13,41 @@ import config
 
 logger = logging.getLogger(__name__)
 
+# --- MONKEY PATCH TIKTOKAUTOUPLOADER MEMORY ---
+try:
+    import tiktokautouploader.function as tf
+    original_make_stealth_context = tf._make_stealth_context
+
+    def patched_make_stealth_context(p, headless, proxy):
+        stealth = tf.Stealth(navigator_languages_override=("en-US", "en"))
+        browser = p.chromium.launch(
+            headless=headless,
+            proxy=proxy,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-infobars",
+                "--disable-dev-shm-usage",
+                "--single-process",        # <--- MASSIVE MEMORY SAVINGS
+                "--disable-gpu",           # <--- MASSIVE MEMORY SAVINGS
+                "--no-zygote",             # <--- MASSIVE MEMORY SAVINGS
+                "--js-flags=--max-old-space-size=256" # <--- LIMIT V8 RAM
+            ],
+        )
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 900},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            locale="en-US",
+            timezone_id="America/New_York",
+        )
+        stealth.apply_stealth_sync(context)
+        return browser, context
+
+    tf._make_stealth_context = patched_make_stealth_context
+except ImportError:
+    pass
+# -----------------------------------------------
+
 # Track if we've already accepted cookies this session
 _cookies_accepted = False
 
