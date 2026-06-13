@@ -41,22 +41,32 @@ scheduler = BackgroundScheduler()
 
 def bot_job():
     with app.app_context():
+        import logging
+        logger = logging.getLogger("bot")
+        logger.info("⚡ Run Now triggered! Checking settings...")
         try:
             # Check if bot is enabled in settings
             settings = Settings.query.first()
             if settings and not settings.is_running:
+                logger.warning("Bot is PAUSED in Settings! Skipping run.")
                 return
             
+            logger.info("Bot is ENABLED. Starting pipeline...")
             # Fetch active accounts
             from models import TikTokAccount
             active_accounts = [acc.username for acc in TikTokAccount.query.filter_by(is_active=True).all()]
+            
+            if not active_accounts:
+                logger.error("No active TikTok accounts found! Add one in Settings.")
+            else:
+                logger.info(f"Found active accounts: {active_accounts}")
             
             # Run the bot pipeline
             bot_main.run_pipeline(dry_run=False, active_accounts=active_accounts)
         except Exception as e:
             import traceback
-            print(f"Error in background bot job: {str(e)}")
-            traceback.print_exc()
+            logger.error(f"Error in background bot job: {str(e)}")
+            logger.error(traceback.format_exc())
 
 @app.before_request
 def initialize_db():
