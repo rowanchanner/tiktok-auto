@@ -12,5 +12,5 @@ RUN python -m phantomwright_driver install chromium
 COPY . .
 RUN python patch_uploader.py
 
-# Run the web dashboard using gunicorn with strict memory limits
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 1 --preload --max-requests 10 --max-requests-jitter 2 app:app
+# Run the web dashboard using gunicorn with strict memory limits and a long timeout
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 1 --preload --timeout 300 --max-requests 10 --max-requests-jitter 2 app:app
