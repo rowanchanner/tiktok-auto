@@ -71,8 +71,10 @@ def setup_logging(level: str = None):
 
 logger = logging.getLogger("main")
 
+# Initialize logging when module is imported
+setup_logging()
 
-# ─── Pipeline ────────────────────────────────────────────────────────────────
+# ─── Global Objects ─────────────────────────────────────────────────────────────────────────────
 
 def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
     """Run the complete discovery -> download -> upload pipeline."""
