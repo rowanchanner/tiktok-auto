@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, redirect, url_for, session, request
 from authlib.integrations.flask_client import OAuth
 from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -40,12 +41,17 @@ scheduler = BackgroundScheduler()
 
 def bot_job():
     with app.app_context():
-        # Check if bot is enabled in settings
-        settings = Settings.query.first()
-        if settings and not settings.is_running:
-            return
-        # Run the bot pipeline
-        bot_main.run_pipeline(dry_run=False, db_session=db.session)
+        try:
+            # Check if bot is enabled in settings
+            settings = Settings.query.first()
+            if settings and not settings.is_running:
+                return
+            # Run the bot pipeline (removed invalid db_session arg)
+            bot_main.run_pipeline(dry_run=False)
+        except Exception as e:
+            import traceback
+            print(f"Error in background bot job: {str(e)}")
+            traceback.print_exc()
 
 @app.before_request
 def initialize_db():
@@ -163,8 +169,17 @@ def history():
 
 @app.route('/run_now', methods=['POST'])
 def run_now():
-    # Trigger a run immediately
-    scheduler.get_job('tiktok_job').modify(next_run_time=datetime.now())
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+        
+    try:
+        job = scheduler.get_job('tiktok_job')
+        if job:
+            job.modify(next_run_time=datetime.now())
+    except Exception as e:
+        return f"Error scheduling job: {str(e)}", 500
+        
     return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':

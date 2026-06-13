@@ -18,10 +18,13 @@ import io
 from datetime import datetime, timezone
 
 # Fix Windows console encoding for emoji/unicode in log messages
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-if sys.stderr.encoding != 'utf-8':
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+try:
+    if sys.stdout.encoding != 'utf-8':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if sys.stderr.encoding != 'utf-8':
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+except AttributeError:
+    pass  # In WSGI environments (like Gunicorn), stdout might not have a .buffer attribute
 
 import schedule as schedule_lib
 
