@@ -113,6 +113,10 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
     logger.info("")
     logger.info("─── Step 3: Uploading to TikTok ───")
     
+    # Aggressively clear memory before spawning Chromium
+    import gc
+    gc.collect()
+    
     # Pick a random active account to post to
     account_name = random.choice(active_accounts)
     logger.info(f"Posting to account: @{account_name}")
