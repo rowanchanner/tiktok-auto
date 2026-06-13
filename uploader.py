@@ -230,9 +230,21 @@ def upload_video(video_info: dict, account_name: str = None, dry_run: bool = Fal
 
         logger.info(f"📤 Uploading to TikTok...")
         
-        # Format proxy for tiktokautouploader if provided
-        proxy_url = getattr(config, "PROXY_URL", "")
-        proxy_dict = {"server": proxy_url} if proxy_url else None
+        # Pull a single burner proxy from the database
+        from models import Proxy
+        from app import app, db
+        
+        proxy_dict = None
+        with app.app_context():
+            burner = Proxy.query.first()
+            if burner:
+                proxy_dict = {"server": burner.proxy_url}
+                logger.info(f"🛡️  Using burner proxy: {burner.proxy_url.split('@')[-1] if '@' in burner.proxy_url else 'Hidden'}")
+                db.session.delete(burner)
+                db.session.commit()
+                logger.info(f"🔥 Burner proxy deleted from pool. {Proxy.query.count()} remaining.")
+            else:
+                logger.warning("⚠️  Burner Proxy Pool is EMPTY! Proceeding with naked IP...")
 
         result = upload_tiktok(
             video=video_path,

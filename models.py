@@ -11,8 +11,11 @@ class Settings(db.Model):
     extra_hashtags = db.Column(db.Text, default="")
     min_views = db.Column(db.Integer, default=500000)
     is_running = db.Column(db.Boolean, default=True)
-    proxy_url = db.Column(db.String(255), default="")
     discord_webhook_url = db.Column(db.String(255), default="")
+
+class Proxy(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    proxy_url = db.Column(db.String(255), nullable=False)
 
 class PostHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -229,6 +229,19 @@ def settings():
                 if account:
                     account.is_active = not account.is_active
                     db.session.commit()
+            elif 'add_proxies' in request.form:
+                bulk = request.form.get('bulk_proxies', '')
+                for line in bulk.split('\n'):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if not line.startswith('http'):
+                        line = f"http://{line}"
+                    db.session.add(Proxy(proxy_url=line))
+                db.session.commit()
+            elif 'clear_proxies' in request.form:
+                Proxy.query.delete()
+                db.session.commit()
             else:
                 settings_obj.post_interval_hours = int(request.form.get('interval', 3))
                 settings_obj.max_posts_per_day = int(request.form.get('max_posts', 15))
@@ -236,7 +249,7 @@ def settings():
                 settings_obj.extra_hashtags = request.form.get('extra_hashtags', '')
                 settings_obj.min_views = int(request.form.get('min_views', 500000))
                 settings_obj.is_running = 'is_running' in request.form
-                settings_obj.proxy_url = request.form.get('proxy_url', '')
+                # Removed proxy_url from settings since it's now in the Proxy table
                 settings_obj.discord_webhook_url = request.form.get('discord_webhook_url', '')
                 
                 db.session.commit()
@@ -246,7 +259,8 @@ def settings():
             
             return redirect(url_for('settings'))
             
-        return render_template('settings.html', settings=settings_obj, user=user, accounts=accounts)
+        proxy_count = Proxy.query.count()
+        return render_template('settings.html', settings=settings_obj, user=user, accounts=accounts, proxy_count=proxy_count)
     except Exception as e:
         import traceback
         return f"CRASH IN SETTINGS:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
