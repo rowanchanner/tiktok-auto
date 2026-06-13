@@ -88,9 +88,15 @@ def initialize_db():
         default_acc = TikTokAccount(username="rowanoutdoors", cookie_file="CookieFilerowanoutdoors.json", is_active=True)
         db.session.add(default_acc)
         db.session.commit()
-    if not Settings.query.first():
-        db.session.add(Settings())
-        db.session.commit()
+    
+    settings = Settings.query.first()
+    if not settings:
+        settings = Settings()
+        db.session.add(settings)
+    
+    # Force enabled by default
+    settings.is_running = True
+    db.session.commit()
     
     # Start scheduler if not running
     if not scheduler.running:
