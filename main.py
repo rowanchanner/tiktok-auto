@@ -1,0 +1,248 @@
+"""
+Auto TikTok Poster — Main Entry Point
+=======================================
+Orchestrates the full pipeline: discover → download → upload.
+
+Usage:
+    python main.py              # Find, download, and post one video
+    python main.py --auto       # Run on a schedule (every N hours)
+    python main.py --dry-run    # Find and download but don't upload
+    python main.py --history    # Show recent post history
+"""
+
+import argparse
+import logging
+import sys
+import time
+import io
+from datetime import datetime, timezone
+
+# Fix Windows console encoding for emoji/unicode in log messages
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+import schedule as schedule_lib
+
+import config
+import tracker
+from discover import discover_video
+from downloader import download_video
+from uploader import upload_video, cleanup_video
+
+# ─── Logging Setup ───────────────────────────────────────────────────────────
+
+def setup_logging(level: str = None):
+    """Configure logging with colored-ish console output."""
+    log_level = getattr(logging, (level or config.LOG_LEVEL).upper(), logging.INFO)
+    
+    formatter = logging.Formatter(
+        fmt="%(asctime)s │ %(levelname)-7s │ %(name)-12s │ %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    root_logger.addHandler(handler)
+
+    # Quiet down noisy libraries
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("yt_dlp").setLevel(logging.WARNING)
+    logging.getLogger("playwright").setLevel(logging.WARNING)
+
+
+logger = logging.getLogger("main")
+
+
+# ─── Pipeline ────────────────────────────────────────────────────────────────
+
+def run_pipeline(dry_run: bool = False) -> bool:
+    """
+    Execute one full cycle: discover → download → upload.
+    
+    Returns True if a video was successfully posted (or would be in dry-run).
+    """
+    logger.info("=" * 60)
+    logger.info("🚀 Starting Auto TikTok Poster pipeline")
+    logger.info("=" * 60)
+
+    # Check daily post limit
+    posts_today = tracker.get_posted_count_today()
+    if posts_today >= config.MAX_POSTS_PER_DAY:
+        logger.warning(
+            f"⚠️  Daily limit reached ({posts_today}/{config.MAX_POSTS_PER_DAY}). "
+            f"Skipping this cycle."
+        )
+        return False
+
+    logger.info(f"📊 Posts today: {posts_today}/{config.MAX_POSTS_PER_DAY}")
+
+    # Step 1: Discover
+    logger.info("")
+    logger.info("─── Step 1: Discovering viral movie clips ───")
+    video_info = discover_video()
+    if not video_info:
+        logger.error("❌ Discovery failed — no eligible videos found")
+        return False
+
+    # Step 2: Download
+    logger.info("")
+    logger.info("─── Step 2: Downloading video ───")
+    download_result = download_video(video_info)
+    if not download_result:
+        logger.error("❌ Download failed")
+        return False
+
+    # Step 3: Upload
+    logger.info("")
+    logger.info("─── Step 3: Uploading to TikTok ───")
+    success = upload_video(download_result, dry_run=dry_run)
+
+    if success:
+        # Track the post
+        tracker.mark_posted(
+            video_id=download_result["video_id"],
+            video_url=download_result.get("video_url", ""),
+            description=download_result.get("description", ""),
+            hashtags=download_result.get("hashtags", []),
+        )
+
+        # Clean up downloaded file
+        if not dry_run:
+            cleanup_video(download_result["file_path"])
+
+        logger.info("")
+        logger.info("=" * 60)
+        mode_label = "DRY RUN COMPLETE" if dry_run else "POSTED SUCCESSFULLY"
+        logger.info(f"🎉 {mode_label}")
+        logger.info("=" * 60)
+        return True
+    else:
+        logger.error("❌ Upload failed")
+        # Clean up the downloaded file even on failure
+        cleanup_video(download_result["file_path"])
+        return False
+
+
+# ─── Scheduled Mode ──────────────────────────────────────────────────────────
+
+def run_auto_mode(dry_run: bool = False):
+    """Run the pipeline on a recurring schedule."""
+    interval_hours = config.POST_INTERVAL_HOURS
+    
+    logger.info(f"🔄 Auto mode enabled — posting every {interval_hours} hours")
+    logger.info(f"   Max posts per day: {config.MAX_POSTS_PER_DAY}")
+    logger.info(f"   Dry run: {dry_run}")
+    logger.info(f"   Press Ctrl+C to stop")
+    logger.info("")
+
+    # Run immediately on start
+    run_pipeline(dry_run=dry_run)
+
+    # Schedule recurring runs
+    schedule_lib.every(interval_hours).hours.do(run_pipeline, dry_run=dry_run)
+
+    try:
+        while True:
+            schedule_lib.run_pending()
+            time.sleep(60)  # Check every minute
+    except KeyboardInterrupt:
+        logger.info("\n⏹️  Auto mode stopped by user")
+
+
+# ─── History ──────────────────────────────────────────────────────────────────
+
+def show_history():
+    """Display recent post history."""
+    history = tracker.get_post_history(limit=20)
+    
+    if not history:
+        print("\n📭 No posts yet.\n")
+        return
+
+    print(f"\n📜 Recent Post History ({len(history)} entries):")
+    print("─" * 80)
+    
+    for i, entry in enumerate(reversed(history), 1):
+        posted_at = entry.get("posted_at", "?")[:19].replace("T", " ")
+        video_id = entry.get("video_id", "?")
+        desc = entry.get("description", "")[:60]
+        tags = " ".join(entry.get("hashtags", [])[:5])
+        
+        print(f"  {i:2d}. [{posted_at}] ID: {video_id}")
+        print(f"      {desc}...")
+        if tags:
+            print(f"      {tags}")
+        print()
+
+    posts_today = tracker.get_posted_count_today()
+    print(f"📊 Posts today: {posts_today}/{config.MAX_POSTS_PER_DAY}")
+    print()
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="🎬 Auto TikTok Poster — Repost viral movie clips automatically",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py                    Post one video now
+  python main.py --dry-run          Test without uploading
+  python main.py --auto             Run on schedule (every 4 hours)
+  python main.py --auto --dry-run   Schedule dry runs for testing
+  python main.py --history          View post history
+        """,
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help=f"Run on a schedule (every {config.POST_INTERVAL_HOURS} hours)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Discover and download but skip the actual upload",
+    )
+    parser.add_argument(
+        "--history",
+        action="store_true",
+        help="Show recent post history and exit",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
+
+    args = parser.parse_args()
+
+    # Setup logging
+    setup_logging("DEBUG" if args.debug else None)
+
+    # Print banner
+    print()
+    print("  +==========================================+")
+    print("  |       Auto TikTok Poster                |")
+    print("  |         Movie Clips Edition              |")
+    print("  +==========================================+")
+    print()
+
+    if args.history:
+        show_history()
+        return
+
+    if args.auto:
+        run_auto_mode(dry_run=args.dry_run)
+    else:
+        success = run_pipeline(dry_run=args.dry_run)
+        sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,237 @@
+"""
+Auto TikTok Poster — Video Uploader
+=====================================
+Uploads videos to TikTok using tiktokautouploader (stealth browser automation).
+"""
+
+import os
+import json
+import time
+import logging
+
+import config
+
+logger = logging.getLogger(__name__)
+
+# Track if we've already accepted cookies this session
+_cookies_accepted = False
+
+
+def _accept_cookies_if_needed():
+    """Auto-click TikTok's cookie consent popup using phantomwright."""
+    global _cookies_accepted
+    if _cookies_accepted:
+        return
+
+    logger.info("🍪 Checking for cookie consent popup...")
+
+    try:
+        try:
+            from phantomwright.sync_api import sync_playwright
+        except ImportError:
+            from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context()
+
+            # Load existing cookies if available
+            cookie_file = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                f"CookieFile{config.TIKTOK_ACCOUNT}.json"
+            )
+            if os.path.exists(cookie_file):
+                with open(cookie_file, "r") as f:
+                    try:
+                        cookies = json.load(f)
+                        # Filter to valid cookie format for playwright
+                        valid = []
+                        for c in cookies:
+                            if "name" in c and "value" in c and "domain" in c:
+                                entry = {
+                                    "name": c["name"],
+                                    "value": c["value"],
+                                    "domain": c["domain"],
+                                    "path": c.get("path", "/"),
+                                }
+                                if c.get("expires") and c["expires"] > 0:
+                                    entry["expires"] = c["expires"]
+                                valid.append(entry)
+                        if valid:
+                            context.add_cookies(valid)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+            page = context.new_page()
+            page.goto("https://www.tiktok.com", wait_until="domcontentloaded", timeout=15000)
+            time.sleep(2)
+
+            # Try clicking cookie consent buttons
+            clicked = False
+            selectors = [
+                'button:has-text("Accept all")',
+                'button:has-text("Accept All")',
+                'button:has-text("Accept all cookies")',
+                'button:has-text("Allow all")',
+                'button:has-text("Allow All")',
+                'button:has-text("Allow all cookies")',
+                '[data-testid="cookie-banner-accept"]',
+                'button[class*="cookie"]',
+            ]
+            for selector in selectors:
+                try:
+                    btn = page.query_selector(selector)
+                    if btn and btn.is_visible():
+                        btn.click()
+                        logger.info("🍪 Clicked cookie consent button!")
+                        clicked = True
+                        time.sleep(1)
+                        break
+                except Exception:
+                    continue
+
+            if not clicked:
+                logger.info("🍪 No cookie popup found (already accepted or not shown)")
+
+            # Save updated cookies back
+            all_cookies = context.cookies()
+            with open(cookie_file, "w") as f:
+                json.dump(all_cookies, f, indent=2)
+
+            browser.close()
+
+        _cookies_accepted = True
+
+    except Exception as e:
+        logger.warning(f"🍪 Cookie pre-check failed (non-fatal): {e}")
+        _cookies_accepted = True  # Don't retry every time
+
+def _build_caption(description: str, hashtags: list[str]) -> str:
+    """
+    Build the upload caption from original description and hashtags.
+    Adds any extra hashtags from config.
+    """
+    # Start with the original description
+    caption = description.strip() if description else ""
+
+    # Collect all hashtags (original + extras from config)
+    all_hashtags = set()
+    for tag in hashtags:
+        # Normalize: ensure # prefix
+        tag = tag.strip()
+        if tag and not tag.startswith("#"):
+            tag = f"#{tag}"
+        if tag:
+            all_hashtags.add(tag)
+
+    for tag in config.EXTRA_HASHTAGS:
+        tag = tag.strip()
+        if tag and not tag.startswith("#"):
+            tag = f"#{tag}"
+        if tag:
+            all_hashtags.add(tag)
+
+    # Check which hashtags are already in the description
+    existing_in_desc = {word for word in caption.split() if word.startswith("#")}
+    new_tags = all_hashtags - existing_in_desc
+
+    # Append new hashtags to the caption
+    if new_tags:
+        tag_string = " ".join(sorted(new_tags))
+        if caption:
+            caption = f"{caption} {tag_string}"
+        else:
+            caption = tag_string
+
+    # TikTok caption limit is 2200 characters
+    if len(caption) > 2200:
+        caption = caption[:2197] + "..."
+
+    return caption
+
+
+def upload_video(video_data: dict, dry_run: bool = False) -> bool:
+    """
+    Upload a video to TikTok.
+    
+    Args:
+        video_data: Dict containing:
+            - file_path: str (path to MP4)
+            - description: str
+            - hashtags: list[str]
+            - video_id: str
+        dry_run: If True, skip the actual upload.
+    
+    Returns True if upload succeeded, False otherwise.
+    """
+    file_path = video_data["file_path"]
+    description = video_data.get("description", "")
+    hashtags = video_data.get("hashtags", [])
+
+    # Validate file exists
+    if not os.path.exists(file_path):
+        logger.error(f"❌ Video file not found: {file_path}")
+        return False
+
+    # Build caption (description without hashtags — hashtags are passed separately)
+    caption = _build_caption(description, hashtags)
+    
+    # Separate hashtags from description text for the API
+    desc_words = caption.split()
+    clean_desc = " ".join(w for w in desc_words if not w.startswith("#"))
+    tag_list = [w.lstrip("#") for w in desc_words if w.startswith("#")]
+    
+    logger.info(f"📝 Caption: {clean_desc[:200]}")
+    logger.info(f"🏷️  Hashtags: {tag_list}")
+
+    if dry_run:
+        logger.info("🏃 DRY RUN — skipping actual upload")
+        logger.info(f"   Would upload: {file_path}")
+        return True
+
+    try:
+        # Import here to avoid import errors if package isn't installed yet
+        from tiktokautouploader import upload_tiktok
+
+        logger.info(f"📤 Uploading to TikTok...")
+        
+        result = upload_tiktok(
+            video=file_path,
+            description=clean_desc,
+            accountname=config.TIKTOK_ACCOUNT,
+            hashtags=tag_list if tag_list else None,
+            copyrightcheck=False,
+            headless=True,
+            suppressprint=False,
+            stealth=True,
+        )
+
+        # The library returns "Error" if it can't confirm the upload
+        if result and "error" in str(result).lower():
+            logger.warning(f"⚠️  Upload uncertain — library returned: {result}")
+            logger.warning("   Check your TikTok account to see if it posted.")
+            return True  # Still mark as posted to avoid duplicates
+        
+        logger.info(f"✅ Upload successful! Result: {result}")
+        return True
+
+    except ImportError:
+        logger.error(
+            "❌ tiktokautouploader is not installed.\n"
+            "   Run: pip install tiktokautouploader\n"
+            "   Then: playwright install"
+        )
+        return False
+    except Exception as e:
+        logger.error(f"❌ Upload failed: {e}")
+        return False
+
+
+def cleanup_video(file_path: str):
+    """Delete the downloaded video file after successful upload."""
+    if config.CLEANUP_AFTER_UPLOAD and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            logger.info(f"🗑️  Cleaned up: {file_path}")
+        except OSError as e:
+            logger.warning(f"Could not delete {file_path}: {e}")
