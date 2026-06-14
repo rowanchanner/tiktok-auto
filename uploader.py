@@ -238,8 +238,29 @@ def upload_video(video_info: dict, account_name: str = None, dry_run: bool = Fal
         with app.app_context():
             burner = Proxy.query.first()
             if burner:
-                proxy_dict = {"server": burner.proxy_url}
-                logger.info(f"🛡️  Using burner proxy: {burner.proxy_url.split('@')[-1] if '@' in burner.proxy_url else 'Hidden'}")
+                raw_proxy = burner.proxy_url
+                # Clean up any http:// or https:// prefixes
+                if raw_proxy.startswith('http://'):
+                    raw_proxy = raw_proxy[7:]
+                elif raw_proxy.startswith('https://'):
+                    raw_proxy = raw_proxy[8:]
+                    
+                # Parse user:pass@host:port format expected by the library
+                if '@' in raw_proxy:
+                    creds, hostport = raw_proxy.split('@', 1)
+                    if ':' in creds:
+                        user, pwd = creds.split(':', 1)
+                        proxy_dict = {
+                            "server": hostport,
+                            "username": user,
+                            "password": pwd
+                        }
+                    else:
+                        proxy_dict = {"server": hostport}
+                else:
+                    proxy_dict = {"server": raw_proxy}
+                    
+                logger.info(f"🛡️  Using burner proxy: {proxy_dict['server']}")
                 db.session.delete(burner)
                 db.session.commit()
                 logger.info(f"🔥 Burner proxy deleted from pool. {Proxy.query.count()} remaining.")
