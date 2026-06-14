@@ -35,3 +35,61 @@
 00:44:35 │ INFO    │ main         │ ============================================================
 00:44:35 │ INFO    │ main         │ 🎉 POSTED SUCCESSFULLY
 00:44:35 │ INFO    │ main         │ ============================================================
+02:07:08 │ INFO    │ werkzeug     │ [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.0.5:8080
+02:07:08 │ INFO    │ werkzeug     │ [33mPress CTRL+C to quit[0m
+02:07:16 │ INFO    │ apscheduler.scheduler │ Adding job tentatively -- it will be properly scheduled when the scheduler starts
+02:07:16 │ INFO    │ apscheduler.scheduler │ Added job "bot_job" to job store "default"
+02:07:16 │ INFO    │ apscheduler.scheduler │ Scheduler started
+02:07:16 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:07:16] "[32mGET / HTTP/1.1[0m" 302 -
+02:07:16 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:07:16] "GET /login HTTP/1.1" 200 -
+02:07:16 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:07:16] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+02:07:16 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:07:16] "GET /login HTTP/1.1" 200 -
+02:07:18 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:07:18] "[32mGET /google_login HTTP/1.1[0m" 302 -
+02:08:35 │ INFO    │ werkzeug     │ [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.0.5:8080
+02:08:35 │ INFO    │ werkzeug     │ [33mPress CTRL+C to quit[0m
+02:08:43 │ INFO    │ apscheduler.scheduler │ Adding job tentatively -- it will be properly scheduled when the scheduler starts
+02:08:43 │ INFO    │ apscheduler.scheduler │ Added job "bot_job" to job store "default"
+02:08:43 │ INFO    │ apscheduler.scheduler │ Scheduler started
+02:08:43 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:08:43] "[35m[1mGET / HTTP/1.1[0m" 500 -
+02:08:43 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:08:43] "[32mGET /favicon.ico HTTP/1.1[0m" 302 -
+02:08:43 │ INFO    │ werkzeug     │ 192.168.0.5 - - [14/Jun/2026 02:08:43] "GET /login HTTP/1.1" 200 -
+02:10:33 │ INFO    │ main         │ ============================================================
+02:10:33 │ INFO    │ main         │ 📊 Posts today: 0/15
+02:10:33 │ INFO    │ main         │ 
+02:10:33 │ INFO    │ main         │ ─── Step 1: Discovering viral movie clips ───
+02:10:34 │ INFO    │ discover     │ Found 30 videos for #movieclips
+02:10:34 │ INFO    │ discover     │ Filtered to 3 eligible videos (from 30 total)
+02:10:36 │ INFO    │ discover     │ Found 27 videos for #movietok
+02:10:36 │ INFO    │ discover     │ Filtered to 3 eligible videos (from 27 total)
+02:10:37 │ INFO    │ discover     │ Found 30 videos for #filmclips
+02:10:37 │ INFO    │ discover     │ Filtered to 0 eligible videos (from 30 total)
+02:10:38 │ INFO    │ discover     │ Found 29 videos for #moviescenes
+02:10:38 │ INFO    │ discover     │ Filtered to 2 eligible videos (from 29 total)
+02:10:39 │ INFO    │ discover     │ Found 28 videos for #moviemoments
+02:10:39 │ INFO    │ discover     │ Filtered to 6 eligible videos (from 28 total)
+02:10:39 │ INFO    │ discover     │ 🎬 Selected: https://www.tiktok.com/@cineminute94/video/7647851427120958752
+   Author: @cineminute94
+   Views: 4,478,007
+   Duration: 60s
+   Description: #usatiktok🇺🇸 #movie #action #cine ...
+02:10:39 │ INFO    │ main         │ 
+02:10:39 │ INFO    │ main         │ ─── Step 2: Downloading video ───
+02:10:39 │ INFO    │ downloader   │ ⬇️  Downloading with yt-dlp: https://www.tiktok.com/@cineminute94/video/7647851427120958752
+02:10:41 │ INFO    │ downloader   │ ✅ Downloaded: C:\Users\churc\OneDrive\Desktop\nope\downloads\7647851427120958752.mp4 (4.5 MB)
+02:10:42 │ INFO    │ downloader   │ 📋 Metadata extracted:
+   Description: #usatiktok🇺🇸 #movie #action #cine ...
+   Hashtags: #usatiktok🇺🇸 #movie #action #cine
+   Music: son original — Cineminut🇺🇲
+02:10:42 │ INFO    │ main         │ 
+02:10:42 │ INFO    │ main         │ ─── Step 3: Uploading to TikTok ───
+02:10:42 │ INFO    │ main         │ Posting to account: @rowanoutdoors
+02:10:42 │ INFO    │ uploader     │ 📝 Caption: 
+02:10:42 │ INFO    │ uploader     │ 🏷️  Hashtags: ['usatiktok🇺🇸', 'movie', 'action', 'cine']
+02:10:42 │ INFO    │ uploader     │ 📤 Uploading to TikTok...
+02:10:42 │ WARNING │ uploader     │ ⚠️  Burner Proxy Pool is EMPTY! Proceeding with naked IP...

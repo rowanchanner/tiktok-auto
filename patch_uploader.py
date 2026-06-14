@@ -12,6 +12,9 @@ def patch():
         if os.path.exists(function_py):
             with open(function_py, 'r', encoding='utf-8') as f:
                 content = f.read()
+            if "_intercept_sleep" in content:
+                print(f"Already patched {function_py}")
+                return
             
             # Fix Playwright strict mode violation for Cancel buttons
             content = content.replace('"button:has-text(\'Cancel\')"', '"button:has-text(\'Cancel\') >> nth=0"')

@@ -1,6 +1,5 @@
 import os
 from flask import Flask, render_template, redirect, url_for, session, request
-from authlib.integrations.flask_client import OAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from dotenv import load_dotenv
@@ -26,17 +25,7 @@ app.config['MAX_FORM_MEMORY_SIZE'] = 50 * 1024 * 1024  # 50 MB
 
 db.init_app(app)
 
-# Google OAuth Setup
-oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'},
-)
-
-ALLOWED_EMAIL = "rowanchanner2@gmail.com"
+# Removed Google OAuth since we are running locally
 
 # APScheduler Setup
 scheduler = BackgroundScheduler()
@@ -161,16 +150,10 @@ def authorize():
         import traceback
         return f"Error during authorization: {str(e)}<br><br>Traceback:<br><pre>{traceback.format_exc()}</pre>", 500
 
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    return redirect(url_for('login'))
+
 
 @app.route('/')
 def dashboard():
-    user = session.get('user')
-    if not user:
-        return redirect(url_for('login'))
         
     try:
         settings = Settings.query.first()
@@ -189,9 +172,6 @@ from werkzeug.utils import secure_filename
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
-    user = session.get('user')
-    if not user:
-        return redirect(url_for('login'))
         
     try:
         settings_obj = Settings.query.first()
@@ -286,9 +266,6 @@ def settings():
 @app.route('/history')
 def history():
     try:
-        user = session.get('user')
-        if not user:
-            return redirect(url_for('login'))
         posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).all()
         return render_template('history.html', posts=posts, user=user)
     except Exception as e:
@@ -298,9 +275,6 @@ def history():
 @app.route('/run_now', methods=['POST'])
 def run_now():
     try:
-        user = session.get('user')
-        if not user:
-            return redirect(url_for('login'))
             
         from datetime import timezone
         job = scheduler.get_job('tiktok_job')
@@ -314,9 +288,6 @@ def run_now():
 
 @app.route('/logs_api')
 def logs_api():
-    user = session.get('user')
-    if not user:
-        return "Unauthorized", 401
     
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot.log")
     if not os.path.exists(log_file):
