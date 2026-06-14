@@ -26,6 +26,9 @@ def patch():
             content = content.replace('page.click(\'button:has-text("Post")[aria-disabled="false"]\', timeout=2000)', 'page.click(\'button:has-text("Post")[aria-disabled="false"]\', timeout=2000, force=True)')
             content = content.replace('page.locator(\'button:has-text("Post now")\').click(timeout=3000)', 'page.locator(\'button:has-text("Post now")\').click(timeout=3000, force=True)')
             
+            # Hide TikTok Joyride tutorial overlays globally so they never block clicks
+            content = content.replace("page.wait_for_selector('div[data-contents=\"true\"]')", "page.add_style_tag(content='.react-joyride__overlay, #react-joyride-portal { display: none !important; }')\n    page.wait_for_selector('div[data-contents=\"true\"]')")
+            
             # Inject Discord Webhook Screenshot Streamer
             discord_snippet = """
         try:
