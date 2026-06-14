@@ -74,6 +74,14 @@ def initialize_db():
     app.before_request_funcs[None].remove(initialize_db)
     db.create_all()
     
+    # Auto-migrate: Add discord_webhook_url column if it doesn't exist
+    from sqlalchemy import text
+    try:
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN discord_webhook_url VARCHAR(255) DEFAULT ""'))
+        db.session.commit()
+    except:
+        db.session.rollback()
+    
     # Restore cookies from persistent disk on Render
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, 'data')
