@@ -29,22 +29,50 @@ def patch():
             # Hide TikTok Joyride tutorial overlays globally so they never block clicks
             content = content.replace("page.wait_for_selector('div[data-contents=\"true\"]')", "page.add_style_tag(content='.react-joyride__overlay, #react-joyride-portal { display: none !important; }')\n    page.wait_for_selector('div[data-contents=\"true\"]')")
             
-            # Inject Discord Webhook Screenshot Streamer
-            discord_snippet = """
-        try:
-            import config
-            import requests
-            webhook = getattr(config, "DISCORD_WEBHOOK_URL", "")
-            if webhook:
-                page.screenshot(path="debug_screen.png")
-                with open("debug_screen.png", "rb") as f:
-                    requests.post(webhook, files={"file": ("screen.png", f, "image/png")}, data={"content": "📸 Headless browser preparing to click Post!"})
-        except Exception:
-            pass
-        page.wait_for_selector('button:has-text("Post")[aria-disabled="false"]', timeout=12000000)
+            # Intercept time.sleep to send screenshots every 2 seconds
+            screenshot_interceptor = """
+import time as builtin_time
+import config
+import requests
+
+_last_screenshot = 0
+_page_ref = None
+
+def _intercept_sleep(seconds):
+    global _last_screenshot, _page_ref
+    
+    webhook = getattr(config, "DISCORD_WEBHOOK_URL", "")
+    if not webhook or not _page_ref:
+        builtin_time.sleep(seconds)
+        return
+
+    # Sleep in small chunks so we can send screenshots exactly every 2 seconds
+    chunk = 0.5
+    loops = int(seconds / chunk)
+    remainder = seconds % chunk
+    
+    for _ in range(loops):
+        builtin_time.sleep(chunk)
+        now = builtin_time.time()
+        if now - _last_screenshot >= 2.0:
+            _last_screenshot = now
+            try:
+                _page_ref.screenshot(path="stream.png")
+                with open("stream.png", "rb") as f:
+                    requests.post(webhook, files={"file": ("stream.png", f, "image/png")})
+            except Exception:
+                pass
+                
+    if remainder > 0:
+        builtin_time.sleep(remainder)
+
+time = type('TimeMock', (), {'sleep': _intercept_sleep, 'time': builtin_time.time})
 """
-            content = content.replace("page.wait_for_selector('button:has-text(\"Post\")[aria-disabled=\"false\"]', timeout=12000000)", discord_snippet)
+            # Inject interceptor right after `import time`
+            content = content.replace("import time", screenshot_interceptor)
             
+            # Capture the `page` object reference when it's created
+            content = content.replace("page = context.new_page()", "page = context.new_page()\n        global _page_ref\n        _page_ref = page")
             with open(function_py, 'w', encoding='utf-8') as f:
                 f.write(content)
             print(f"Successfully patched {function_py}")
