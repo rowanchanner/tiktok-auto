@@ -253,18 +253,26 @@ def settings():
                 Proxy.query.delete()
                 db.session.commit()
             else:
-                settings_obj.post_interval_hours = int(request.form.get('interval', 3))
-                settings_obj.max_posts_per_day = int(request.form.get('max_posts', 15))
-                settings_obj.hashtags = request.form.get('hashtags', '')
-                settings_obj.extra_hashtags = request.form.get('extra_hashtags', '')
-                settings_obj.min_views = int(request.form.get('min_views', 500000))
+                pass
+
+            # Always save settings regardless of which button was clicked
+            settings_obj.post_interval_hours = int(request.form.get('interval', settings_obj.post_interval_hours))
+            settings_obj.max_posts_per_day = int(request.form.get('max_posts', settings_obj.max_posts_per_day))
+            settings_obj.hashtags = request.form.get('hashtags', settings_obj.hashtags)
+            settings_obj.extra_hashtags = request.form.get('extra_hashtags', settings_obj.extra_hashtags)
+            settings_obj.min_views = int(request.form.get('min_views', settings_obj.min_views))
+            if 'interval' in request.form:
                 settings_obj.is_running = 'is_running' in request.form
-                # Removed proxy_url from settings since it's now in the Proxy table
-                settings_obj.discord_webhook_url = request.form.get('discord_webhook_url', '')
+            
+            # The Webhook URL must be explicitly retrieved and saved if it is in the form payload
+            webhook_val = request.form.get('discord_webhook_url')
+            if webhook_val is not None:
+                settings_obj.discord_webhook_url = webhook_val
                 
-                db.session.commit()
-                
-                # Reschedule job with new interval
+            db.session.commit()
+            
+            # Reschedule job with new interval
+            if 'interval' in request.form:
                 scheduler.reschedule_job('tiktok_job', trigger='interval', hours=settings_obj.post_interval_hours)
             
             return redirect(url_for('settings'))
