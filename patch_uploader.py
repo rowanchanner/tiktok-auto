@@ -30,7 +30,9 @@ def patch():
             content = content.replace("page.wait_for_selector('div[data-contents=\"true\"]')", "page.add_style_tag(content='.react-joyride__overlay, #react-joyride-portal { display: none !important; }'); page.wait_for_selector('div[data-contents=\"true\"]')")
             
             # Prevent the library from cancelling proxy uploads mid-flight if the network is slow
-            content = content.replace("page.wait_for_url(url=CONTENT_URL, timeout=2000)", "page.wait_for_url(url=CONTENT_URL, timeout=120000)")
+            content = content.replace("timeout=2000", "timeout=60000")
+            content = content.replace("timeout=3000", "timeout=60000")
+            content = content.replace("timeout=5000", "timeout=60000")
             
             # Intercept time.sleep to send screenshots every 2 seconds
             screenshot_interceptor = """
@@ -54,10 +56,12 @@ def _intercept_sleep(seconds):
                 s = Settings.query.first()
                 if s and s.discord_webhook_url:
                     _webhook_cache = s.discord_webhook_url
+                    print(f"WEBHOOK INITIALIZED: {_webhook_cache}", flush=True)
                 else:
                     _webhook_cache = "EMPTY"
+                    print("CRITICAL: DISCORD WEBHOOK IS EMPTY IN DATABASE!", flush=True)
         except Exception as e:
-            print(f"WEBHOOK DB FETCH ERROR: {e}")
+            print(f"WEBHOOK DB FETCH ERROR: {e}", flush=True)
             _webhook_cache = "EMPTY"
 
     if _webhook_cache == "EMPTY" or not _page_ref:
@@ -80,9 +84,9 @@ def _intercept_sleep(seconds):
                 with open(screen_path, "rb") as f:
                     resp = requests.post(_webhook_cache, files={"file": ("stream.png", f, "image/png")})
                     if resp.status_code >= 400:
-                        print(f"WEBHOOK POST ERROR: {resp.status_code} - {resp.text}")
+                        print(f"WEBHOOK POST ERROR: {resp.status_code} - {resp.text}", flush=True)
             except Exception as e:
-                print(f"WEBHOOK EXEC ERROR: {e}")
+                print(f"WEBHOOK EXEC ERROR: {e}", flush=True)
                 pass
                 
     if remainder > 0:
