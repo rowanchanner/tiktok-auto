@@ -29,20 +29,38 @@ def patch():
             # Hide TikTok Joyride tutorial overlays globally so they never block clicks
             content = content.replace("page.wait_for_selector('div[data-contents=\"true\"]')", "page.add_style_tag(content='.react-joyride__overlay, #react-joyride-portal { display: none !important; }'); page.wait_for_selector('div[data-contents=\"true\"]')")
             
+            # Prevent the library from cancelling proxy uploads mid-flight if the network is slow
+            content = content.replace("page.wait_for_url(url=CONTENT_URL, timeout=2000)", "page.wait_for_url(url=CONTENT_URL, timeout=120000)")
+            
             # Intercept time.sleep to send screenshots every 2 seconds
             screenshot_interceptor = """
 import time as builtin_time
 import config
 import requests
+import os
 
 _last_screenshot = 0
 _page_ref = None
+_webhook_cache = None
 
 def _intercept_sleep(seconds):
-    global _last_screenshot, _page_ref
+    global _last_screenshot, _page_ref, _webhook_cache
     
-    webhook = getattr(config, "DISCORD_WEBHOOK_URL", "")
-    if not webhook or not _page_ref:
+    if _webhook_cache is None:
+        try:
+            from app import app
+            from models import Settings
+            with app.app_context():
+                s = Settings.query.first()
+                if s and s.discord_webhook_url:
+                    _webhook_cache = s.discord_webhook_url
+                else:
+                    _webhook_cache = "EMPTY"
+        except Exception as e:
+            print(f"WEBHOOK DB FETCH ERROR: {e}")
+            _webhook_cache = "EMPTY"
+
+    if _webhook_cache == "EMPTY" or not _page_ref:
         builtin_time.sleep(seconds)
         return
 
@@ -57,10 +75,14 @@ def _intercept_sleep(seconds):
         if now - _last_screenshot >= 2.0:
             _last_screenshot = now
             try:
-                _page_ref.screenshot(path="stream.png")
-                with open("stream.png", "rb") as f:
-                    requests.post(webhook, files={"file": ("stream.png", f, "image/png")})
-            except Exception:
+                screen_path = os.path.join(config.BASE_DIR, "stream.png")
+                _page_ref.screenshot(path=screen_path)
+                with open(screen_path, "rb") as f:
+                    resp = requests.post(_webhook_cache, files={"file": ("stream.png", f, "image/png")})
+                    if resp.status_code >= 400:
+                        print(f"WEBHOOK POST ERROR: {resp.status_code} - {resp.text}")
+            except Exception as e:
+                print(f"WEBHOOK EXEC ERROR: {e}")
                 pass
                 
     if remainder > 0:
