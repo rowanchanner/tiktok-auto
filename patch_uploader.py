@@ -27,7 +27,7 @@ def patch():
             content = content.replace('page.locator(\'button:has-text("Post now")\').click(timeout=3000)', 'page.locator(\'button:has-text("Post now")\').click(timeout=3000, force=True)')
             
             # Hide TikTok Joyride tutorial overlays globally so they never block clicks
-            content = content.replace("page.wait_for_selector('div[data-contents=\"true\"]')", "page.add_style_tag(content='.react-joyride__overlay, #react-joyride-portal { display: none !important; }')\n    page.wait_for_selector('div[data-contents=\"true\"]')")
+            content = content.replace("page.wait_for_selector('div[data-contents=\"true\"]')", "page.add_style_tag(content='.react-joyride__overlay, #react-joyride-portal { display: none !important; }'); page.wait_for_selector('div[data-contents=\"true\"]')")
             
             # Intercept time.sleep to send screenshots every 2 seconds
             screenshot_interceptor = """
