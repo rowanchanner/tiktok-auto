@@ -21,6 +21,8 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
 # Use DATABASE_URL for Render PostgreSQL, otherwise fallback to local SQLite
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///bot.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
+app.config['MAX_FORM_MEMORY_SIZE'] = 50 * 1024 * 1024  # 50 MB
 
 db.init_app(app)
 
