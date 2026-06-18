@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m phantomwright_driver install chromium
 
 COPY . .
+RUN cp CookieFilerowanoutdoors.json TK_cookies_rowanoutdoors.json 2>/dev/null || true
 RUN python patch_uploader.py
 
 # Run the web dashboard using gunicorn with strict memory limits and a long timeout
