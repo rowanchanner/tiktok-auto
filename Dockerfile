@@ -13,5 +13,12 @@ COPY . .
 RUN cp CookieFilerowanoutdoors.json TK_cookies_rowanoutdoors.json 2>/dev/null || true
 RUN python patch_uploader.py
 
-# Run the web dashboard using gunicorn with strict memory limits and a long timeout
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 1 --preload --timeout 300 --max-requests 10 --max-requests-jitter 2 app:app
+# Memory-saving settings for 512MB Render Starter plan
+ENV MALLOC_ARENA_MAX=2
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV PYTORCH_NO_CUDA=1
+ENV PYTHONUNBUFFERED=1
+
+# Run the web dashboard
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 300 --max-requests 5 --max-requests-jitter 2 app:app

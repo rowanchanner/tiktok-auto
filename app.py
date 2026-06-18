@@ -231,6 +231,14 @@ def run_now():
         import traceback
         return f"CRASH IN RUN_NOW:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
+@app.route('/toggle_bot', methods=['POST'])
+def toggle_bot():
+    settings = Settings.query.first()
+    if settings:
+        settings.is_running = not settings.is_running
+        db.session.commit()
+    return redirect(url_for('dashboard'))
+
 @app.route('/logs_api')
 def logs_api():
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot.log")

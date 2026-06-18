@@ -4,11 +4,13 @@
 <div class="glass-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <h1>Dashboard</h1>
-        <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
             {% if settings and settings.is_running %}
                 <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Bot Active</span>
+                <form action="/toggle_bot" method="POST" style="margin:0;"><button type="submit" class="btn" style="background:rgba(239,68,68,0.2);color:#f87171;padding:0.3rem 0.75rem;font-size:0.8rem;"><i class="fa-solid fa-pause"></i> Pause</button></form>
             {% else %}
                 <span class="badge badge-danger"><i class="fa-solid fa-circle-pause"></i> Bot Paused</span>
+                <form action="/toggle_bot" method="POST" style="margin:0;"><button type="submit" class="btn btn-success" style="padding:0.3rem 0.75rem;font-size:0.8rem;"><i class="fa-solid fa-play"></i> Resume</button></form>
             {% endif %}
         </div>
     </div>
