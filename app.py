@@ -16,8 +16,9 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
 
-# Database setup — SQLite for simplicity
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///bot.db")
+# Database setup — use persistent disk if available
+DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.path.dirname(os.path.abspath(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(DATA_DIR, 'bot.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
 app.config['MAX_FORM_MEMORY_SIZE'] = 50 * 1024 * 1024  # 50 MB
@@ -68,12 +69,12 @@ def initialize_db():
     
     # Restore cookies from persistent disk on Render
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(base_dir, 'data')
-    if os.path.exists(data_dir):
+    persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
+    if os.path.exists(persist_dir):
         import shutil
-        for f in os.listdir(data_dir):
-            if f.startswith("CookieFile") and f.endswith(".json"):
-                shutil.copy(os.path.join(data_dir, f), os.path.join(base_dir, f))
+        for f in os.listdir(persist_dir):
+            if (f.startswith("CookieFile") or f.startswith("TK_cookies")) and f.endswith(".json"):
+                shutil.copy(os.path.join(persist_dir, f), os.path.join(base_dir, f))
                 
     # Add default account if none exist
     if TikTokAccount.query.count() == 0:
@@ -132,11 +133,11 @@ def settings():
                     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
                     file.save(file_path)
                     
-                    # Also save to persistent disk if it exists
-                    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-                    if os.path.exists(data_dir):
+                    # Also save to persistent disk
+                    persist_dir = '/var/data' if os.path.exists('/var/data') else None
+                    if persist_dir:
                         import shutil
-                        shutil.copy(file_path, os.path.join(data_dir, filename))
+                        shutil.copy(file_path, os.path.join(persist_dir, filename))
                     
                     # Update or create account in DB
                     account = TikTokAccount.query.filter_by(username=username).first()
@@ -151,9 +152,9 @@ def settings():
                     try:
                         base_dir = os.path.dirname(os.path.abspath(__file__))
                         os.remove(os.path.join(base_dir, account.cookie_file))
-                        data_dir = os.path.join(base_dir, 'data')
-                        if os.path.exists(data_dir):
-                            os.remove(os.path.join(data_dir, account.cookie_file))
+                        persist_dir = '/var/data' if os.path.exists('/var/data') else None
+                        if persist_dir:
+                            os.remove(os.path.join(persist_dir, account.cookie_file))
                     except:
                         pass
                     db.session.delete(account)
