@@ -67,6 +67,7 @@ def setup_logging(level: str = None):
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("yt_dlp").setLevel(logging.WARNING)
     logging.getLogger("playwright").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 
 logger = logging.getLogger("main")
@@ -141,6 +142,23 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
         mode_label = "DRY RUN COMPLETE" if dry_run else "POSTED SUCCESSFULLY"
         logger.info(f"🎉 {mode_label}")
         logger.info("=" * 60)
+        
+        # Send Discord notification
+        if not dry_run:
+            try:
+                webhook_url = getattr(config, "DISCORD_WEBHOOK_URL", "")
+                if webhook_url:
+                    import requests
+                    desc = download_result.get("description", "")[:200]
+                    vid_url = download_result.get("video_url", "")
+                    tags = " ".join(download_result.get("hashtags", [])[:5])
+                    requests.post(webhook_url, json={
+                        "content": f"✅ **Posted to @{account_name}!**\n📝 {desc}\n🏷️ {tags}\n🔗 {vid_url}"
+                    }, timeout=10)
+                    logger.info("📨 Discord notification sent!")
+            except Exception as e:
+                logger.warning(f"Discord webhook failed (non-fatal): {e}")
+        
         return True
     else:
         logger.error("❌ Upload failed")

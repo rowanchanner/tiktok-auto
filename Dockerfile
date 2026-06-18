@@ -20,5 +20,5 @@ ENV MKL_NUM_THREADS=1
 ENV PYTORCH_NO_CUDA=1
 ENV PYTHONUNBUFFERED=1
 
-# Run the web dashboard
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 300 --max-requests 5 --max-requests-jitter 2 app:app
+# Run the web dashboard (2 threads so website stays responsive during uploads)
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 300 app:app
