@@ -93,3 +93,71 @@
 02:10:42 │ INFO    │ uploader     │ 🏷️  Hashtags: ['usatiktok🇺🇸', 'movie', 'action', 'cine']
 02:10:42 │ INFO    │ uploader     │ 📤 Uploading to TikTok...
 02:10:42 │ WARNING │ uploader     │ ⚠️  Burner Proxy Pool is EMPTY! Proceeding with naked IP...
+16:17:14 │ INFO    │ main         │ ============================================================
+16:17:14 │ INFO    │ main         │ 📊 Posts today: 0/15
+16:17:14 │ INFO    │ main         │ 
+16:17:14 │ INFO    │ main         │ ─── Step 1: Discovering viral movie clips ───
+16:17:15 │ INFO    │ discover     │ Found 28 videos for #filmtok
+16:17:15 │ INFO    │ discover     │ Filtered to 2 eligible videos (from 28 total)
+16:17:16 │ INFO    │ discover     │ Found 28 videos for #movieclips
+16:17:16 │ INFO    │ discover     │ Filtered to 0 eligible videos (from 28 total)
+16:17:18 │ INFO    │ discover     │ Found 25 videos for #moviemoments
+16:17:18 │ INFO    │ discover     │ Filtered to 5 eligible videos (from 25 total)
+16:17:19 │ INFO    │ discover     │ Found 28 videos for #cinemascenes
+16:17:19 │ INFO    │ discover     │ Filtered to 8 eligible videos (from 28 total)
+16:17:19 │ INFO    │ discover     │ 🎬 Selected: https://www.tiktok.com/@abikearabmoney/video/7581839070704192776
+   Author: @abikearabmoney
+   Views: 1,037,805
+   Duration: 7s
+   Description: This scene was funny at first😂as a first timer, I was shy lol. NIGHT MARKET MOVI...
+16:17:19 │ INFO    │ main         │ 
+16:17:19 │ INFO    │ main         │ ─── Step 2: Downloading video ───
+16:17:19 │ INFO    │ downloader   │ ⬇️  Downloading with yt-dlp: https://www.tiktok.com/@abikearabmoney/video/7581839070704192776
+16:17:21 │ INFO    │ downloader   │ ✅ Downloaded: C:\Users\churc\OneDrive\Desktop\nope\downloads\7581839070704192776.mp4 (0.3 MB)
+16:17:22 │ INFO    │ downloader   │ 📋 Metadata extracted:
+   Description: This scene was funny at first😂as a first timer, I was shy lol. NIGHT MARKET MOVIE is showing on YouT...
+   Hashtags: #fypシ゚ #chididikee #mustwatch #moviestowatch #nightmarketthemovie
+   Music: original sound — Papaya_ex(Bigpaps for a reason
+16:17:22 │ INFO    │ main         │ 
+16:17:22 │ INFO    │ main         │ ─── Step 3: Uploading to TikTok ───
+16:17:22 │ INFO    │ main         │ Posting to account: @rowanoutdoors
+16:17:22 │ INFO    │ uploader     │ 📝 Caption: This scene was funny at first😂as a first timer, I was shy lol. NIGHT MARKET MOVIE is showing on YouTube on PAPAYAEXTVV 🎬
+16:17:22 │ INFO    │ uploader     │ 🏷️  Hashtags: ['fypシ゚', 'chididikee', 'mustwatch', 'moviestowatch', 'nightmarketthemovie']
+16:17:22 │ INFO    │ uploader     │ 📤 Uploading to TikTok...
+16:17:22 │ WARNING │ uploader     │ ⚠️  Burner Proxy Pool is EMPTY! Proceeding with naked IP...
+16:19:08 │ INFO    │ werkzeug     │ [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.0.5:8080
+16:19:08 │ INFO    │ werkzeug     │ [33mPress CTRL+C to quit[0m
+16:19:52 │ INFO    │ main         │ ============================================================
+16:19:52 │ INFO    │ main         │ 📊 Posts today: 0/15
+16:19:52 │ INFO    │ main         │ 
+16:19:52 │ INFO    │ main         │ ─── Step 1: Discovering viral movie clips ───
+16:19:54 │ INFO    │ discover     │ Found 29 videos for #filmtok
+16:19:54 │ INFO    │ discover     │ Filtered to 2 eligible videos (from 29 total)
+16:19:55 │ INFO    │ discover     │ Found 27 videos for #cinemascenes
+16:19:55 │ INFO    │ discover     │ Filtered to 9 eligible videos (from 27 total)
+16:19:55 │ INFO    │ discover     │ 🎬 Selected: https://www.tiktok.com/@apricotshoppin/video/7588451226912574751
+   Author: @apricotshoppin
+   Views: 29,217,584
+   Duration: 30s
+   Description: #Film #Movie #Cinema #FilmScene #MovieScene #FilmLover #MovieLover #FilmTime #Mo...
+16:19:55 │ INFO    │ main         │ 
+16:19:55 │ INFO    │ main         │ ─── Step 2: Downloading video ───
+16:19:55 │ INFO    │ downloader   │ ⬇️  Downloading with yt-dlp: https://www.tiktok.com/@apricotshoppin/video/7588451226912574751
+16:19:58 │ INFO    │ downloader   │ ✅ Downloaded: C:\Users\churc\OneDrive\Desktop\nope\downloads\7588451226912574751.mp4 (7.1 MB)
+16:19:59 │ INFO    │ downloader   │ 📋 Metadata extracted:
+   Description: #Film #Movie #Cinema #FilmScene #MovieScene #FilmLover #MovieLover #FilmTime #MovieVibes...
+   Hashtags: #Film #Movie #Cinema #FilmScene #MovieScene #FilmLover #MovieLover #FilmTime #MovieVibes
+   Music: original sound — 🍊
+16:19:59 │ INFO    │ main         │ 
+16:19:59 │ INFO    │ main         │ ─── Step 3: Uploading to TikTok ───
+16:19:59 │ INFO    │ main         │ Posting to account: @rowanoutdoors
+16:19:59 │ INFO    │ uploader     │ 📝 Caption: 
+16:19:59 │ INFO    │ uploader     │ 🏷️  Hashtags: ['Film', 'Movie', 'Cinema', 'FilmScene', 'MovieScene', 'FilmLover', 'MovieLover', 'FilmTime', 'MovieVibes']
+16:19:59 │ INFO    │ uploader     │ 📤 Uploading to TikTok...
+16:19:59 │ WARNING │ uploader     │ ⚠️  Burner Proxy Pool is EMPTY! Proceeding with naked IP...
+16:21:30 │ ERROR   │ uploader     │ ❌ Upload failed: POSSIBLE ERROR UPLOADING: Cannot confirm if uploaded successfully, Please check account in a minute or two to confirm.
+16:21:30 │ ERROR   │ main         │ ❌ Upload failed
+16:21:30 │ INFO    │ uploader     │ 🗑️  Cleaned up: C:\Users\churc\OneDrive\Desktop\nope\downloads\7588451226912574751.mp4

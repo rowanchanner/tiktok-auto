@@ -87,43 +87,6 @@
             color: var(--text-main);
         }
 
-        .user-profile {
-            margin-top: auto;
-            padding: 1rem;
-            background: rgba(0,0,0,0.2);
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .user-profile img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .user-email {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .logout-btn {
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: var(--danger);
-            text-decoration: none;
-        }
-
         .main-content {
             flex: 1;
             padding: 2rem;
@@ -222,6 +185,7 @@
         }
         .badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
         .badge-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .badge-primary { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
 
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
@@ -247,10 +211,6 @@
                 padding: 0.5rem 1rem;
                 font-size: 0.875rem;
             }
-            .user-profile {
-                margin-top: 1rem;
-                justify-content: center;
-            }
             .main-content {
                 padding: 1rem;
             }
@@ -261,7 +221,6 @@
     </style>
 </head>
 <body>
-    {% if user %}
     <nav class="sidebar">
         <div class="brand">
             <i class="fa-solid fa-robot"></i> Auto Poster
@@ -271,17 +230,7 @@
             <li><a href="/settings" class="{% if request.path == '/settings' %}active{% endif %}"><i class="fa-solid fa-gear"></i> Settings</a></li>
             <li><a href="/history" class="{% if request.path == '/history' %}active{% endif %}"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
         </ul>
-
-        <div class="user-profile">
-            <img src="{{ user.picture }}" alt="Profile">
-            <div class="user-info">
-                <span>{{ user.name }}</span>
-                <span class="user-email">{{ user.email }}</span>
-                <a href="/logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-            </div>
-        </div>
     </nav>
-    {% endif %}
 
     <main class="main-content">
         {% block content %}{% endblock %}

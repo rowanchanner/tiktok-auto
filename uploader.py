@@ -5,8 +5,6 @@ Uploads videos to TikTok using tiktokautouploader (stealth browser automation).
 """
 
 import os
-import json
-import time
 import logging
 
 import config
@@ -43,98 +41,6 @@ except ImportError:
     pass
 # -----------------------------------------------
 
-# Track if we've already accepted cookies this session
-_cookies_accepted = False
-
-
-def _accept_cookies_if_needed():
-    """Auto-click TikTok's cookie consent popup using phantomwright."""
-    global _cookies_accepted
-    if _cookies_accepted:
-        return
-
-    logger.info("🍪 Checking for cookie consent popup...")
-
-    try:
-        try:
-            from phantomwright.sync_api import sync_playwright
-        except ImportError:
-            from playwright.sync_api import sync_playwright
-
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context()
-
-            # Load existing cookies if available
-            cookie_file = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                f"CookieFile{config.TIKTOK_ACCOUNT}.json"
-            )
-            if os.path.exists(cookie_file):
-                with open(cookie_file, "r") as f:
-                    try:
-                        cookies = json.load(f)
-                        # Filter to valid cookie format for playwright
-                        valid = []
-                        for c in cookies:
-                            if "name" in c and "value" in c and "domain" in c:
-                                entry = {
-                                    "name": c["name"],
-                                    "value": c["value"],
-                                    "domain": c["domain"],
-                                    "path": c.get("path", "/"),
-                                }
-                                if c.get("expires") and c["expires"] > 0:
-                                    entry["expires"] = c["expires"]
-                                valid.append(entry)
-                        if valid:
-                            context.add_cookies(valid)
-                    except (json.JSONDecodeError, TypeError):
-                        pass
-
-            page = context.new_page()
-            page.goto("https://www.tiktok.com", wait_until="domcontentloaded", timeout=15000)
-            time.sleep(2)
-
-            # Try clicking cookie consent buttons
-            clicked = False
-            selectors = [
-                'button:has-text("Accept all")',
-                'button:has-text("Accept All")',
-                'button:has-text("Accept all cookies")',
-                'button:has-text("Allow all")',
-                'button:has-text("Allow All")',
-                'button:has-text("Allow all cookies")',
-                '[data-testid="cookie-banner-accept"]',
-                'button[class*="cookie"]',
-            ]
-            for selector in selectors:
-                try:
-                    btn = page.query_selector(selector)
-                    if btn and btn.is_visible():
-                        btn.click()
-                        logger.info("🍪 Clicked cookie consent button!")
-                        clicked = True
-                        time.sleep(1)
-                        break
-                except Exception:
-                    continue
-
-            if not clicked:
-                logger.info("🍪 No cookie popup found (already accepted or not shown)")
-
-            # Save updated cookies back
-            all_cookies = context.cookies()
-            with open(cookie_file, "w") as f:
-                json.dump(all_cookies, f, indent=2)
-
-            browser.close()
-
-        _cookies_accepted = True
-
-    except Exception as e:
-        logger.warning(f"🍪 Cookie pre-check failed (non-fatal): {e}")
-        _cookies_accepted = True  # Don't retry every time
 
 def _build_caption(description: str, hashtags: list[str]) -> str:
     """
@@ -274,7 +180,7 @@ def upload_video(video_info: dict, account_name: str = None, dry_run: bool = Fal
             hashtags=tag_list if tag_list else None,
             proxy=proxy_dict,
             copyrightcheck=False,
-            headless=not (os.name == 'nt'),  # Visible on Windows, headless on Linux
+            headless=True,  # Always headless on Render
             suppressprint=False,
             stealth=True,
         )

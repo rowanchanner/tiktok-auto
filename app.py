@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from dotenv import load_dotenv
@@ -16,16 +16,13 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
 
-# Database setup
-# Use DATABASE_URL for Render PostgreSQL, otherwise fallback to local SQLite
+# Database setup — SQLite for simplicity
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///bot.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
 app.config['MAX_FORM_MEMORY_SIZE'] = 50 * 1024 * 1024  # 50 MB
 
 db.init_app(app)
-
-# Removed Google OAuth since we are running locally
 
 # APScheduler Setup
 scheduler = BackgroundScheduler()
@@ -36,15 +33,12 @@ def bot_job():
         logger = logging.getLogger("bot")
         logger.info("⚡ Run Now triggered! Checking settings...")
         try:
-            # Check if bot is enabled in settings
             settings = Settings.query.first()
             if settings and not settings.is_running:
                 logger.warning("Bot is PAUSED in Settings! Skipping run.")
                 return
             
             logger.info("Bot is ENABLED. Starting pipeline...")
-            # Fetch active accounts
-            from models import TikTokAccount
             active_accounts = [acc.username for acc in TikTokAccount.query.filter_by(is_active=True).all()]
             
             if not active_accounts:
@@ -52,7 +46,6 @@ def bot_job():
             else:
                 logger.info(f"Found active accounts: {active_accounts}")
             
-            # Run the bot pipeline
             bot_main.run_pipeline(dry_run=False, active_accounts=active_accounts)
         except Exception as e:
             import traceback
@@ -104,57 +97,10 @@ def initialize_db():
         scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job')
         scheduler.start()
 
-# --- Auth Middleware ---
-@app.before_request
-def require_login():
-    allowed_routes = ['login', 'google_login', 'authorize', 'static']
-    if request.endpoint not in allowed_routes and 'user' not in session:
-        return redirect(url_for('login'))
-
 # --- Routes ---
-
-@app.route('/login')
-def login():
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('login.html')
-
-@app.route('/google_login')
-def google_login():
-    try:
-        # Force HTTPS redirect URI unless testing locally
-        scheme = 'http' if request.host.startswith('localhost') or request.host.startswith('127.0.0.1') else 'https'
-        redirect_uri = url_for('authorize', _external=True, _scheme=scheme)
-        return google.authorize_redirect(redirect_uri)
-    except Exception as e:
-        return f"Error during Google Login: {str(e)}", 500
-
-@app.route('/authorize')
-def authorize():
-    try:
-        token = google.authorize_access_token()
-        # With OpenID Connect, userinfo might be inside the token
-        user_info = token.get('userinfo')
-        
-        if not user_info:
-            # Fallback using absolute URL since api_base_url was removed
-            resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo')
-            user_info = resp.json()
-            
-        if user_info.get('email') != ALLOWED_EMAIL:
-            return "Unauthorized. This dashboard is locked to a specific account.", 403
-            
-        session['user'] = user_info
-        return redirect(url_for('dashboard'))
-    except Exception as e:
-        import traceback
-        return f"Error during authorization: {str(e)}<br><br>Traceback:<br><pre>{traceback.format_exc()}</pre>", 500
-
-
 
 @app.route('/')
 def dashboard():
-        
     try:
         settings = Settings.query.first()
         recent_posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(5).all()
@@ -163,7 +109,7 @@ def dashboard():
         job = scheduler.get_job('tiktok_job')
         next_run = job.next_run_time if job else None
         
-        return render_template('dashboard.html', user=user, settings=settings, next_run=next_run, recent_posts=recent_posts)
+        return render_template('dashboard.html', settings=settings, next_run=next_run, recent_posts=recent_posts)
     except Exception as e:
         import traceback
         return f"CRASH IN DASHBOARD:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
@@ -172,7 +118,6 @@ from werkzeug.utils import secure_filename
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
-        
     try:
         settings_obj = Settings.query.first()
         accounts = TikTokAccount.query.all()
@@ -258,7 +203,7 @@ def settings():
             return redirect(url_for('settings'))
             
         proxy_count = Proxy.query.count()
-        return render_template('settings.html', settings=settings_obj, user=user, accounts=accounts, proxy_count=proxy_count)
+        return render_template('settings.html', settings=settings_obj, accounts=accounts, proxy_count=proxy_count)
     except Exception as e:
         import traceback
         return f"CRASH IN SETTINGS:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
@@ -267,7 +212,7 @@ def settings():
 def history():
     try:
         posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).all()
-        return render_template('history.html', posts=posts, user=user)
+        return render_template('history.html', posts=posts)
     except Exception as e:
         import traceback
         return f"CRASH IN HISTORY:<br><br>{str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
@@ -275,7 +220,6 @@ def history():
 @app.route('/run_now', methods=['POST'])
 def run_now():
     try:
-            
         from datetime import timezone
         job = scheduler.get_job('tiktok_job')
         if job:
@@ -288,7 +232,6 @@ def run_now():
 
 @app.route('/logs_api')
 def logs_api():
-    
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot.log")
     if not os.path.exists(log_file):
         return "Log file not found... Waiting for bot to run.\n"

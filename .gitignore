@@ -4,3 +4,12 @@ data/
 *.mp4
 venv/
 .env
+*.bat
+*.sh
+bot.log
+*.db
+browser_data/
+localhost_run.txt
+pinggy_output.txt
+instance/
+stream.png
