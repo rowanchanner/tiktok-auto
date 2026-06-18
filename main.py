@@ -150,10 +150,10 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
                 if webhook_url:
                     import requests
                     desc = download_result.get("description", "")[:200]
-                    vid_url = download_result.get("video_url", "")
                     tags = " ".join(download_result.get("hashtags", [])[:5])
+                    profile = f"https://www.tiktok.com/@{account_name}"
                     requests.post(webhook_url, json={
-                        "content": f"✅ **Posted to @{account_name}!**\n📝 {desc}\n🏷️ {tags}\n🔗 {vid_url}"
+                        "content": f"✅ **Posted to @{account_name}!**\n📝 {desc}\n🏷️ {tags}\n🔗 {profile}"
                     }, timeout=10)
                     logger.info("📨 Discord notification sent!")
             except Exception as e:
