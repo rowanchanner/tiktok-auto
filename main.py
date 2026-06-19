@@ -156,24 +156,31 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
             if not dry_run:
                 try:
                     from youtube_uploader import upload_to_youtube
-                    youtube_success = upload_to_youtube(
+                    yt_video_id = upload_to_youtube(
                         video_path=download_result["file_path"],
                         title=download_result.get("description", "")[:100],
                         description=download_result.get("description", ""),
                         hashtags=download_result.get("hashtags", []),
                     )
+                    if yt_video_id:
+                        youtube_success = True
                 except Exception as e:
                     logger.warning(f"YouTube upload failed: {e}")
+                    yt_video_id = None
         
         success = tiktok_success or youtube_success
         
         if success:
+            # Build links
+            youtube_url = f"https://youtube.com/shorts/{yt_video_id}" if youtube_success and yt_video_id else ""
+            
             tracker.mark_posted(
                 video_id=download_result["video_id"],
                 video_url=download_result.get("video_url", ""),
                 description=download_result.get("description", ""),
                 hashtags=download_result.get("hashtags", []),
                 account=account_name,
+                youtube_url=youtube_url,
             )
             
             if not dry_run:

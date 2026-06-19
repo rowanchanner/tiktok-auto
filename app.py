@@ -46,6 +46,8 @@ youtube_oauth = oauth.register(
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
         'scope': 'https://www.googleapis.com/auth/youtube.upload',
+    },
+    authorize_params={
         'access_type': 'offline',
         'prompt': 'consent',
     },
@@ -122,6 +124,12 @@ def initialize_db():
     try:
         db.session.execute(text('ALTER TABLE tik_tok_account ADD COLUMN max_posts_per_day INTEGER DEFAULT 0'))
         db.session.execute(text('ALTER TABLE tik_tok_account ADD COLUMN post_to TEXT DEFAULT "tiktok"'))
+        db.session.commit()
+    except:
+        db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE post_history ADD COLUMN uploaded_url TEXT DEFAULT ""'))
+        db.session.execute(text('ALTER TABLE post_history ADD COLUMN youtube_url TEXT DEFAULT ""'))
         db.session.commit()
     except:
         db.session.rollback()
@@ -248,10 +256,12 @@ def youtube_callback():
 def dashboard():
     try:
         settings = Settings.query.first()
-        recent_posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).limit(5).all()
         job = scheduler.get_job('tiktok_job')
         next_run = job.next_run_time if job else None
-        return render_template('dashboard.html', settings=settings, next_run=next_run, recent_posts=recent_posts, user=session.get('user'))
+        today_count = PostHistory.query.filter(PostHistory.posted_at >= datetime.utcnow().replace(hour=0, minute=0, second=0)).count()
+        total_count = PostHistory.query.count()
+        accounts = TikTokAccount.query.all()
+        return render_template('dashboard.html', settings=settings, next_run=next_run, today_count=today_count, total_count=total_count, accounts=accounts, user=session.get('user'))
     except Exception as e:
         import traceback
         return f"CRASH: {str(e)}<pre>{traceback.format_exc()}</pre>", 500
@@ -368,11 +378,11 @@ def settings():
         import traceback
         return f"CRASH: {str(e)}<pre>{traceback.format_exc()}</pre>", 500
 
-@app.route('/history')
-def history():
+@app.route('/posts')
+def posts():
     try:
         posts = PostHistory.query.order_by(PostHistory.posted_at.desc()).all()
-        return render_template('history.html', posts=posts, user=session.get('user'))
+        return render_template('posts.html', posts=posts, user=session.get('user'))
     except Exception as e:
         import traceback
         return f"CRASH: {str(e)}<pre>{traceback.format_exc()}</pre>", 500

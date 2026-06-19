@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-paper-plane"></i> Posts</h1>
+
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <p style="color: var(--text-muted); margin: 0;">All videos posted by the bot across all accounts.</p>
+        <span class="badge badge-primary" style="font-size: 0.9rem;">{{ posts|length }} total</span>
+    </div>
+
+    {% if posts %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Account</th>
+                    <th>Description</th>
+                    <th>Hashtags</th>
+                    <th>Links</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts %}
+                <tr>
+                    <td style="white-space: nowrap; font-size: 0.85rem;">{{ post.posted_at.strftime('%d %b %H:%M') if post.posted_at else '-' }}</td>
+                    <td>
+                        <a href="https://www.tiktok.com/@{{ post.account }}" target="_blank" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">
+                            @{{ post.account }}
+                        </a>
+                    </td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;">{{ post.description[:80] if post.description else '-' }}</td>
+                    <td style="font-size: 0.75rem; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ post.hashtags or '-' }}</td>
+                    <td style="white-space: nowrap;">
+                        {% if post.video_url %}
+                        <a href="{{ post.video_url }}" target="_blank" style="color: #ff0050; text-decoration: none; font-size: 0.8rem; margin-right: 0.5rem;" title="Source TikTok">
+                            <i class="fa-brands fa-tiktok"></i> Source
+                        </a>
+                        {% endif %}
+                        {% if post.uploaded_url %}
+                        <a href="{{ post.uploaded_url }}" target="_blank" style="color: #10b981; text-decoration: none; font-size: 0.8rem; margin-right: 0.5rem;" title="Your uploaded TikTok">
+                            <i class="fa-solid fa-up-right-from-square"></i> TikTok
+                        </a>
+                        {% endif %}
+                        {% if post.youtube_url %}
+                        <a href="{{ post.youtube_url }}" target="_blank" style="color: #f00; text-decoration: none; font-size: 0.8rem;" title="YouTube Short">
+                            <i class="fa-brands fa-youtube"></i> YouTube
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No posts yet. The bot will start posting when enabled.</p>
+    {% endif %}
+</div>
+{% endblock %}

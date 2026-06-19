@@ -96,8 +96,8 @@ def upload_to_youtube(video_path: str, title: str, description: str, hashtags: l
         response = request.execute()
         video_id = response.get('id')
         logger.info(f"✅ YouTube Short uploaded! https://youtube.com/shorts/{video_id}")
-        return True
+        return video_id  # return ID so caller can build URL
         
     except Exception as e:
         logger.error(f"❌ YouTube upload failed: {e}")
-        return False
+        return None

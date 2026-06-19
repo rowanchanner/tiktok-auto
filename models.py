@@ -27,6 +27,8 @@ class PostHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     video_id = db.Column(db.String(50), nullable=False)
     video_url = db.Column(db.String(255))
+    uploaded_url = db.Column(db.String(255), default='')  # link to the post on user's TikTok
+    youtube_url = db.Column(db.String(255), default='')   # link to YouTube Short
     description = db.Column(db.Text)
     hashtags = db.Column(db.Text)
     account = db.Column(db.String(100), default='rowanoutdoors')

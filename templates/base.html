@@ -228,8 +228,8 @@
         </div>
         <ul class="nav-links">
             <li><a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+            <li><a href="/posts" class="{% if request.path == '/posts' %}active{% endif %}"><i class="fa-solid fa-paper-plane"></i> Posts</a></li>
             <li><a href="/settings" class="{% if request.path == '/settings' %}active{% endif %}"><i class="fa-solid fa-gear"></i> Settings</a></li>
-            <li><a href="/history" class="{% if request.path == '/history' %}active{% endif %}"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
         </ul>
         <div style="margin-top:auto;padding:1rem;background:rgba(0,0,0,0.2);border-radius:0.5rem;">
             <div style="font-size:0.85rem;">{{ user.email }}</div>

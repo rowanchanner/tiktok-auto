@@ -13,10 +13,11 @@ def get_posted_count_today(account=None):
             count += 1
     return count
 
-def mark_posted(video_id, video_url="", description="", hashtags=[], account="rowanoutdoors"):
+def mark_posted(video_id, video_url="", description="", hashtags=[], account="rowanoutdoors", youtube_url=""):
     new_post = PostHistory(
         video_id=video_id,
         video_url=video_url,
+        youtube_url=youtube_url,
         description=description,
         hashtags=",".join(hashtags) if hashtags else "",
         account=account

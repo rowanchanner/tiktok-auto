@@ -1,98 +1,87 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <h1>Dashboard</h1>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            {% if settings and settings.is_running %}
-                <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Bot Active</span>
-                <form action="/toggle_bot" method="POST" style="margin:0;"><button type="submit" class="btn" style="background:rgba(239,68,68,0.2);color:#f87171;padding:0.3rem 0.75rem;font-size:0.8rem;"><i class="fa-solid fa-pause"></i> Pause</button></form>
+<h1 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-chart-line"></i> Dashboard</h1>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="glass-card" style="margin-bottom: 0;">
+        <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Bot Status</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">
+            {% if settings.is_running %}
+            <span style="color: #10b981;">● Enabled</span>
             {% else %}
-                <span class="badge badge-danger"><i class="fa-solid fa-circle-pause"></i> Bot Paused</span>
-                <form action="/toggle_bot" method="POST" style="margin:0;"><button type="submit" class="btn btn-success" style="padding:0.3rem 0.75rem;font-size:0.8rem;"><i class="fa-solid fa-play"></i> Resume</button></form>
+            <span style="color: #ef4444;">● Disabled</span>
             {% endif %}
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
-            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Next Scheduled Post</div>
-            <div style="font-size: 1.25rem; font-weight: 600;">
-                {% if next_run %}
-                    {{ next_run.strftime('%Y-%m-%d %H:%M:%S') }}
-                {% else %}
-                    Not scheduled
-                {% endif %}
-            </div>
-            <form action="/run_now" method="POST" style="margin-top: 1rem;">
-                <button type="submit" class="btn" style="width: 100%; justify-content: center;"><i class="fa-solid fa-bolt"></i> Run Now</button>
-            </form>
-        </div>
+    <div class="glass-card" style="margin-bottom: 0;">
+        <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Posts Today</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">{{ today_count }} / {{ settings.max_posts_per_day if settings else 15 }}</div>
+    </div>
 
-        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
-            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Schedule</div>
-            {% if settings and settings.use_peak_hours and settings.peak_hours %}
-            <div style="font-size: 1rem; font-weight: 600;">🕐 Peak hours: {{ settings.peak_hours }}:00 GMT</div>
+    <div class="glass-card" style="margin-bottom: 0;">
+        <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Total Posts</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">{{ total_count }}</div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom: 0;">
+        <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Next Scheduled Post</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">
+            {% if next_run %}
+                {{ next_run.strftime('%d %b %H:%M') }} GMT
             {% else %}
-            <div style="font-size: 1.25rem; font-weight: 600;">Every {{ settings.post_interval_hours if settings else 3 }} hours</div>
+                Not scheduled
             {% endif %}
         </div>
     </div>
 
-    <h2>Recent Activity</h2>
-    {% if recent_posts %}
-    <div style="overflow-x: auto; margin-top: 1rem;">
-        <table>
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Video ID</th>
-                    <th>Hashtags</th>
-                    <th>Link</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for post in recent_posts %}
-                <tr>
-                    <td style="color: var(--text-muted); font-size: 0.875rem;">{{ post.posted_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ post.video_id }}</td>
-                    <td><span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">{{ post.hashtags[:30] }}{% if post.hashtags|length > 30 %}...{% endif %}</span></td>
-                    <td><a href="https://www.tiktok.com/@{{ post.account or 'rowanoutdoors' }}" target="_blank" style="color: var(--primary-color);"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p style="color: var(--text-muted); margin-top: 1rem;">No recent posts found.</p>
-    {% endif %}
-
-    <h2 style="margin-top: 2rem;">Live Logs</h2>
-    <div style="background: #000; padding: 1rem; border-radius: 0.5rem; border: 1px solid #333; margin-top: 1rem; overflow-x: auto;">
-        <pre id="log-viewer" style="color: #0f0; font-family: monospace; font-size: 0.875rem; margin: 0; white-space: pre-wrap; min-height: 200px; max-height: 400px; overflow-y: auto;">Loading logs...</pre>
+    <div class="glass-card" style="margin-bottom: 0;">
+        <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Schedule</div>
+        {% if settings and settings.use_peak_hours and settings.peak_hours %}
+        <div style="font-size: 0.95rem; font-weight: 600;">🕐 Peak: {{ settings.peak_hours }}:00 GMT</div>
+        {% else %}
+        <div style="font-size: 1.25rem; font-weight: 600;">Every {{ settings.post_interval_hours if settings else 3 }}h</div>
+        {% endif %}
     </div>
 </div>
 
-<script>
-    function fetchLogs() {
-        fetch('/logs_api')
-            .then(response => response.text())
-            .then(text => {
-                const viewer = document.getElementById('log-viewer');
-                // Only scroll to bottom if user is already near the bottom
-                const isScrolledToBottom = viewer.scrollHeight - viewer.clientHeight <= viewer.scrollTop + 50;
-                viewer.textContent = text;
-                if (isScrolledToBottom) {
-                    viewer.scrollTop = viewer.scrollHeight;
-                }
-            })
-            .catch(err => console.error("Error fetching logs:", err));
-    }
-    
-    // Fetch logs every 2 seconds
-    setInterval(fetchLogs, 2000);
-    // Initial fetch
-    fetchLogs();
-</script>
+<!-- Quick Actions -->
+<div class="glass-card">
+    <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-bolt"></i> Quick Actions</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <form action="/run_now" method="POST">
+            <button type="submit" class="btn btn-success" style="padding: 0.75rem 1.5rem;"><i class="fa-solid fa-bolt"></i> Run Now</button>
+        </form>
+        <form action="/toggle_bot" method="POST">
+            <button type="submit" class="btn" style="padding: 0.75rem 1.5rem; background: {% if settings.is_running %}rgba(239,68,68,0.2); color: #f87171;{% else %}rgba(16,185,129,0.2); color: #34d399;{% endif %}">
+                <i class="fa-solid fa-{% if settings.is_running %}pause{% else %}play{% endif %}"></i>
+                {% if settings.is_running %}Pause Bot{% else %}Resume Bot{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Accounts Overview -->
+<div class="glass-card">
+    <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-users"></i> Active Accounts</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+        {% for account in accounts %}
+        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fa-brands fa-tiktok"></i>
+                <strong>@{{ account.username }}</strong>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                {% if account.is_active %}
+                <span class="badge badge-success">Active</span>
+                {% else %}
+                <span class="badge badge-danger">Paused</span>
+                {% endif %}
+                <span class="badge badge-primary">{{ account.post_to or 'tiktok' }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}
