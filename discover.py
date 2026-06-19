@@ -104,25 +104,18 @@ def _filter_videos(videos: list[dict]) -> list[dict]:
     return filtered
 
 
-def discover_video() -> dict | None:
+def discover_video(custom_hashtags: list = None) -> dict | None:
     """
     Main discovery function. Searches random hashtags for viral movie clips
     and returns a single video dict ready for download.
     
-    Returns a dict with:
-        - video_id: str
-        - video_url: str (TikTok URL)
-        - download_url: str (direct MP4 URL, no watermark)
-        - title: str (description text)
-        - hashtags: list[str]
-        - author: str
-        - play_count: int
-        - duration: int
-        
-    Returns None if no eligible video is found.
+    Args:
+        custom_hashtags: Optional list of hashtags to search. Falls back to global config.
+    
+    Returns a dict with video info or None.
     """
-    # Shuffle hashtags so we get variety
-    hashtags = config.HASHTAGS.copy()
+    # Use custom hashtags if provided, otherwise global
+    hashtags = custom_hashtags if custom_hashtags else config.HASHTAGS.copy()
     random.shuffle(hashtags)
 
     all_candidates = []

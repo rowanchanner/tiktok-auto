@@ -83,6 +83,12 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE tik_tok_account ADD COLUMN search_hashtags TEXT DEFAULT ""'))
+        db.session.execute(text('ALTER TABLE tik_tok_account ADD COLUMN extra_hashtags TEXT DEFAULT ""'))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -212,6 +218,13 @@ def settings():
                 account = TikTokAccount.query.get(account_id)
                 if account:
                     account.is_active = not account.is_active
+                    db.session.commit()
+            elif 'save_account_hashtags' in request.form:
+                account_id = request.form.get('account_id')
+                account = TikTokAccount.query.get(account_id)
+                if account:
+                    account.search_hashtags = request.form.get('account_search_hashtags', '')
+                    account.extra_hashtags = request.form.get('account_extra_hashtags', '')
                     db.session.commit()
             elif 'add_proxies' in request.form:
                 bulk = request.form.get('bulk_proxies', '')

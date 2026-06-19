@@ -104,9 +104,20 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
             logger.info("Reached daily limit. Stopping.")
             break
         
+        # Get per-account hashtags from DB
+        account_hashtags = None
+        try:
+            from models import TikTokAccount
+            acc = TikTokAccount.query.filter_by(username=account_name).first()
+            if acc and acc.search_hashtags and acc.search_hashtags.strip():
+                account_hashtags = [h.strip() for h in acc.search_hashtags.split(',') if h.strip()]
+                logger.info(f"Using custom hashtags for @{account_name}: {account_hashtags}")
+        except:
+            pass
+        
         # Step 1: Discover
         logger.info("─── Step 1: Discovering viral movie clips ───")
-        video_info = discover_video()
+        video_info = discover_video(custom_hashtags=account_hashtags)
         if not video_info:
             logger.warning(f"No eligible videos found for @{account_name}. Skipping.")
             continue

@@ -32,3 +32,5 @@ class TikTokAccount(db.Model):
     username = db.Column(db.String(100), nullable=False, unique=True)
     cookie_file = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    search_hashtags = db.Column(db.Text, default='')  # blank = use global
+    extra_hashtags = db.Column(db.Text, default='')    # blank = use global
