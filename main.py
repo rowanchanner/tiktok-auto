@@ -141,6 +141,16 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
             logger.error(f"Download failed for @{account_name}. Skipping.")
             continue
 
+        # Step 2.5: Apply watermark if enabled
+        if not dry_run:
+            try:
+                from watermark import apply_watermark
+                download_result["file_path"] = apply_watermark(
+                    download_result["file_path"], account_name
+                )
+            except Exception as e:
+                logger.warning(f"Watermark skipped: {e}")
+
         # Step 3: Upload based on post_to setting
         tiktok_success = False
         youtube_success = False

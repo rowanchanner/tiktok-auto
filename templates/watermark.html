@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-paint-brush"></i> Watermark Editor</h1>
+
+<div style="display: grid; grid-template-columns: 1fr 320px; gap: 2rem; align-items: start;">
+    <!-- Settings Panel -->
+    <div class="glass-card">
+        <form action="/watermark" method="POST">
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <input type="checkbox" id="watermark_enabled" name="watermark_enabled" {% if settings.watermark_enabled %}checked{% endif %} onchange="updatePreview()">
+                <label for="watermark_enabled" style="margin: 0; display: inline; cursor: pointer; font-weight: 600; font-size: 1rem; color: var(--text-main);">💧 Enable Watermarks</label>
+            </div>
+
+            <div class="form-group">
+                <label for="watermark_text">Watermark Text <span style="color: var(--text-muted); font-size: 0.8rem;">— use <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.3rem;border-radius:3px;">[username]</code> for auto account name</span></label>
+                <input type="text" id="watermark_text" name="watermark_text" class="form-control" value="{{ settings.watermark_text or 'Follow [username] for more!' }}" oninput="updatePreview()" placeholder="Follow [username] for more!">
+            </div>
+
+            <div class="form-group">
+                <label>Position</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                    {% set positions = [('top-left','↖ Top Left'),('top-center','↑ Top Center'),('top-right','↗ Top Right'),('bottom-left','↙ Bottom Left'),('bottom-center','↓ Bottom Center'),('bottom-right','↘ Bottom Right')] %}
+                    {% for val, label in positions %}
+                    <label style="display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 0.4rem; cursor: pointer; border: 2px solid {% if (settings.watermark_position or 'bottom-center') == val %}var(--primary-color){% else %}var(--border-color){% endif %}; font-size: 0.8rem; transition: border-color 0.15s;">
+                        <input type="radio" name="watermark_position" value="{{ val }}" {% if (settings.watermark_position or 'bottom-center') == val %}checked{% endif %} onchange="updatePreview()" style="display:none;">
+                        {{ label }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="watermark_font_size">Font Size</label>
+                    <input type="range" id="watermark_font_size" name="watermark_font_size" min="12" max="48" value="{{ settings.watermark_font_size or 24 }}" oninput="updatePreview(); document.getElementById('fs-val').textContent = this.value + 'px'" style="width: 100%;">
+                    <span id="fs-val" style="color: var(--text-muted); font-size: 0.8rem;">{{ settings.watermark_font_size or 24 }}px</span>
+                </div>
+                <div class="form-group">
+                    <label for="watermark_opacity">Opacity</label>
+                    <input type="range" id="watermark_opacity" name="watermark_opacity" min="0.1" max="1" step="0.05" value="{{ settings.watermark_opacity or 0.8 }}" oninput="updatePreview(); document.getElementById('op-val').textContent = Math.round(this.value*100)+'%'" style="width: 100%;">
+                    <span id="op-val" style="color: var(--text-muted); font-size: 0.8rem;">{{ ((settings.watermark_opacity or 0.8) * 100)|int }}%</span>
+                </div>
+                <div class="form-group">
+                    <label for="watermark_color">Color</label>
+                    <input type="color" id="watermark_color" name="watermark_color" value="{{ settings.watermark_color or '#ffffff' }}" onchange="updatePreview()" style="width: 100%; height: 38px; border: 1px solid var(--border-color); border-radius: 0.5rem; background: rgba(0,0,0,0.2); cursor: pointer;">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center; padding: 0.75rem; font-size: 1rem; margin-top: 0.5rem;"><i class="fa-solid fa-floppy-disk"></i> Save Watermark Settings</button>
+        </form>
+
+        <!-- Per-account overrides -->
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-users"></i> Per-Account Watermarks</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Leave blank to use the global watermark above. Use <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.3rem;border-radius:3px;">[username]</code> for auto-replacement.</p>
+            {% for account in accounts %}
+            <form method="POST" action="/watermark" style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 0.75rem;">
+                <input type="hidden" name="account_id" value="{{ account.id }}">
+                <div style="min-width: 120px;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted);">@{{ account.username }}</label>
+                </div>
+                <div style="flex: 1;">
+                    <input type="text" name="account_watermark" class="form-control" value="{{ account.watermark_text or '' }}" placeholder="Global: {{ settings.watermark_text or 'Follow [username] for more!' }}" style="font-size: 0.85rem;">
+                </div>
+                <button type="submit" name="save_account_watermark" class="btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; white-space: nowrap;"><i class="fa-solid fa-floppy-disk"></i></button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div>
+        <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem; text-align: center;">Live Preview</div>
+        <div id="phone-frame" style="
+            width: 300px; height: 533px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 2rem;
+            border: 3px solid rgba(255,255,255,0.15);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        ">
+            <!-- Fake video content -->
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+                <div style="text-align: center; color: rgba(255,255,255,0.15);">
+                    <i class="fa-solid fa-play" style="font-size: 3rem;"></i>
+                    <div style="font-size: 0.8rem; margin-top: 0.5rem;">Video Content</div>
+                </div>
+            </div>
+
+            <!-- TikTok-style UI overlay -->
+            <div style="position: absolute; bottom: 60px; left: 12px; right: 60px;">
+                <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 4px;">@<span id="preview-username">rowanoutdoors</span></div>
+                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7); line-height: 1.3;">Amazing viral content 🔥 #fyp #viral</div>
+            </div>
+
+            <!-- Right side icons -->
+            <div style="position: absolute; right: 10px; bottom: 80px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                <div style="text-align: center;"><i class="fa-solid fa-heart" style="font-size: 1.3rem;"></i><div style="font-size: 0.6rem; margin-top: 2px;">12.5K</div></div>
+                <div style="text-align: center;"><i class="fa-solid fa-comment" style="font-size: 1.3rem;"></i><div style="font-size: 0.6rem; margin-top: 2px;">342</div></div>
+                <div style="text-align: center;"><i class="fa-solid fa-share" style="font-size: 1.3rem;"></i><div style="font-size: 0.6rem; margin-top: 2px;">1.2K</div></div>
+            </div>
+
+            <!-- Status bar -->
+            <div style="position: absolute; top: 8px; left: 0; right: 0; display: flex; justify-content: center; font-size: 0.7rem; color: rgba(255,255,255,0.5);">19:30</div>
+
+            <!-- WATERMARK OVERLAY -->
+            <div id="watermark-overlay" style="
+                position: absolute;
+                font-family: 'Inter', Arial, sans-serif;
+                font-weight: 700;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5);
+                pointer-events: none;
+                padding: 8px 12px;
+                white-space: nowrap;
+            ">Follow @rowanoutdoors for more!</div>
+        </div>
+        <div style="text-align: center; margin-top: 0.75rem;">
+            <select id="preview-account" onchange="updatePreview()" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white; padding: 0.4rem 0.75rem; border-radius: 0.4rem; font-family: inherit; font-size: 0.85rem;">
+                {% for account in accounts %}
+                <option value="{{ account.username }}">@{{ account.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<script>
+function updatePreview() {
+    var text = document.getElementById('watermark_text').value;
+    var position = document.querySelector('input[name="watermark_position"]:checked').value;
+    var fontSize = document.getElementById('watermark_font_size').value;
+    var opacity = document.getElementById('watermark_opacity').value;
+    var color = document.getElementById('watermark_color').value;
+    var username = document.getElementById('preview-account').value;
+    var enabled = document.getElementById('watermark_enabled').checked;
+
+    // Update username display
+    document.getElementById('preview-username').textContent = username;
+
+    var overlay = document.getElementById('watermark-overlay');
+    var resolved = text.replace(/\[username\]/g, '@' + username);
+    overlay.textContent = resolved;
+    overlay.style.fontSize = (fontSize * 0.6) + 'px'; // Scale for preview
+    overlay.style.opacity = enabled ? opacity : '0.2';
+    overlay.style.color = color;
+
+    // Position mapping
+    overlay.style.top = overlay.style.bottom = overlay.style.left = overlay.style.right = 'auto';
+    overlay.style.transform = 'none';
+    overlay.style.textAlign = 'left';
+
+    switch(position) {
+        case 'top-left':
+            overlay.style.top = '30px'; overlay.style.left = '12px'; break;
+        case 'top-center':
+            overlay.style.top = '30px'; overlay.style.left = '50%'; overlay.style.transform = 'translateX(-50%)'; overlay.style.textAlign = 'center'; break;
+        case 'top-right':
+            overlay.style.top = '30px'; overlay.style.right = '12px'; overlay.style.textAlign = 'right'; break;
+        case 'bottom-left':
+            overlay.style.bottom = '120px'; overlay.style.left = '12px'; break;
+        case 'bottom-center':
+            overlay.style.bottom = '120px'; overlay.style.left = '50%'; overlay.style.transform = 'translateX(-50%)'; overlay.style.textAlign = 'center'; break;
+        case 'bottom-right':
+            overlay.style.bottom = '120px'; overlay.style.right = '12px'; overlay.style.textAlign = 'right'; break;
+    }
+
+    // Highlight selected position radio
+    document.querySelectorAll('input[name="watermark_position"]').forEach(function(r) {
+        r.parentElement.style.borderColor = r.checked ? 'var(--primary-color)' : 'var(--border-color)';
+    });
+}
+
+updatePreview();
+</script>
+{% endblock %}

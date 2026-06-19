@@ -18,6 +18,12 @@ class Settings(db.Model):
     youtube_enabled = db.Column(db.Boolean, default=False)
     youtube_only = db.Column(db.Boolean, default=False)
     youtube_token = db.Column(db.Text, default="")  # JSON OAuth token for YouTube API
+    watermark_enabled = db.Column(db.Boolean, default=False)
+    watermark_text = db.Column(db.Text, default='Follow [username] for more!')
+    watermark_position = db.Column(db.String(20), default='bottom-center')  # top-left, top-center, top-right, bottom-left, bottom-center, bottom-right
+    watermark_font_size = db.Column(db.Integer, default=24)
+    watermark_opacity = db.Column(db.Float, default=0.8)
+    watermark_color = db.Column(db.String(7), default='#ffffff')
 
 class Proxy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,3 +49,4 @@ class TikTokAccount(db.Model):
     extra_hashtags = db.Column(db.Text, default='')    # blank = use global
     max_posts_per_day = db.Column(db.Integer, default=0)  # 0 = use global
     post_to = db.Column(db.String(20), default='tiktok')  # tiktok, both, youtube
+    watermark_text = db.Column(db.Text, default='')  # blank = use global watermark

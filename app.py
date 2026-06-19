@@ -133,6 +133,17 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN watermark_enabled BOOLEAN DEFAULT 0'))
+        db.session.execute(text("ALTER TABLE settings ADD COLUMN watermark_text TEXT DEFAULT 'Follow [username] for more!'"))
+        db.session.execute(text("ALTER TABLE settings ADD COLUMN watermark_position TEXT DEFAULT 'bottom-center'"))
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN watermark_font_size INTEGER DEFAULT 24'))
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN watermark_opacity REAL DEFAULT 0.8'))
+        db.session.execute(text("ALTER TABLE settings ADD COLUMN watermark_color TEXT DEFAULT '#ffffff'"))
+        db.session.execute(text("ALTER TABLE tik_tok_account ADD COLUMN watermark_text TEXT DEFAULT ''"))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -406,6 +417,36 @@ def toggle_bot():
         settings.is_running = not settings.is_running
         db.session.commit()
     return redirect(url_for('dashboard'))
+
+@app.route('/watermark', methods=['GET', 'POST'])
+def watermark():
+    try:
+        settings_obj = Settings.query.first()
+        accounts = TikTokAccount.query.all()
+        
+        if request.method == 'POST':
+            if 'save_account_watermark' in request.form:
+                account_id = request.form.get('account_id')
+                account = TikTokAccount.query.get(account_id)
+                if account:
+                    account.watermark_text = request.form.get('account_watermark', '')
+                    db.session.commit()
+                return redirect(url_for('watermark'))
+            
+            # Global watermark settings
+            settings_obj.watermark_enabled = 'watermark_enabled' in request.form
+            settings_obj.watermark_text = request.form.get('watermark_text', 'Follow [username] for more!')
+            settings_obj.watermark_position = request.form.get('watermark_position', 'bottom-center')
+            settings_obj.watermark_font_size = int(request.form.get('watermark_font_size', 24))
+            settings_obj.watermark_opacity = float(request.form.get('watermark_opacity', 0.8))
+            settings_obj.watermark_color = request.form.get('watermark_color', '#ffffff')
+            db.session.commit()
+            return redirect(url_for('watermark'))
+        
+        return render_template('watermark.html', settings=settings_obj, accounts=accounts, user=session.get('user'))
+    except Exception as e:
+        import traceback
+        return f"CRASH: {str(e)}<pre>{traceback.format_exc()}</pre>", 500
 
 @app.route('/console')
 def console():
