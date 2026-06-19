@@ -35,8 +35,13 @@
         </div>
 
         <div class="form-group">
-            <label for="discord_webhook_url">Discord Webhook URL for Screenshots (Optional)</label>
+            <label for="discord_webhook_url">Discord Webhook URL (Optional)</label>
             <input type="text" id="discord_webhook_url" name="discord_webhook_url" class="form-control" value="{{ settings.discord_webhook_url if settings else '' }}" placeholder="https://discord.com/api/webhooks/...">
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="discord_screenshots" name="discord_screenshots" {% if settings.discord_screenshots %}checked{% endif %}>
+            <label for="discord_screenshots" style="margin: 0; display: inline; cursor: pointer;">Send browser screenshots to Discord during uploads</label>
         </div>
 
         <button type="submit" class="btn btn-success" style="margin-top: 1.5rem; width: 100%;"><i class="fa-solid fa-floppy-disk"></i> Save Bot Settings</button>

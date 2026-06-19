@@ -12,6 +12,7 @@ class Settings(db.Model):
     min_views = db.Column(db.Integer, default=500000)
     is_running = db.Column(db.Boolean, default=True)
     discord_webhook_url = db.Column(db.String(255), default="")
+    discord_screenshots = db.Column(db.Boolean, default=False)
 
 class Proxy(db.Model):
     id = db.Column(db.Integer, primary_key=True)

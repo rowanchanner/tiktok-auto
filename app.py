@@ -78,6 +78,11 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN discord_screenshots BOOLEAN DEFAULT 0'))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -232,6 +237,7 @@ def settings():
             webhook_val = request.form.get('discord_webhook_url')
             if webhook_val is not None:
                 settings_obj.discord_webhook_url = webhook_val
+            settings_obj.discord_screenshots = 'discord_screenshots' in request.form
             db.session.commit()
             if 'interval' in request.form:
                 scheduler.reschedule_job('tiktok_job', trigger='interval', hours=settings_obj.post_interval_hours)
