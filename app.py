@@ -142,20 +142,29 @@ def initialize_db():
 
 def _schedule_bot_job(settings):
     """Add or replace the bot job based on peak hours vs interval mode."""
-    import pytz
     try:
         scheduler.remove_job('tiktok_job')
     except:
         pass
     
-    if settings and settings.use_peak_hours and settings.peak_hours:
-        hours = settings.peak_hours.strip()
-        scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job', timezone=pytz.UTC)
-        print(f"[SCHEDULER] Set to peak hours (GMT): {hours}:00", flush=True)
-    else:
-        interval = settings.post_interval_hours if settings else 3
-        scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job')
-        print(f"[SCHEDULER] Set to interval: every {interval} hours", flush=True)
+    try:
+        if settings and settings.use_peak_hours and settings.peak_hours:
+            hours = settings.peak_hours.strip()
+            scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job', timezone='UTC')
+            print(f"[SCHEDULER] Set to peak hours (GMT): {hours}:00", flush=True)
+        else:
+            interval = settings.post_interval_hours if settings else 3
+            scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job')
+            print(f"[SCHEDULER] Set to interval: every {interval} hours", flush=True)
+        
+        job = scheduler.get_job('tiktok_job')
+        if job:
+            print(f"[SCHEDULER] Next run: {job.next_run_time}", flush=True)
+    except Exception as e:
+        print(f"[SCHEDULER] ERROR: {e}", flush=True)
+        # Fallback to interval
+        scheduler.add_job(bot_job, 'interval', hours=3, id='tiktok_job')
+        print("[SCHEDULER] Fell back to 3 hour interval", flush=True)
 
 # --- Auth Middleware ---
 @app.before_request
