@@ -142,6 +142,7 @@ def initialize_db():
 
 def _schedule_bot_job(settings):
     """Add or replace the bot job based on peak hours vs interval mode."""
+    import pytz
     try:
         scheduler.remove_job('tiktok_job')
     except:
@@ -149,11 +150,12 @@ def _schedule_bot_job(settings):
     
     if settings and settings.use_peak_hours and settings.peak_hours:
         hours = settings.peak_hours.strip()
-        # Convert "9,12,18,21" to cron hour field "9,12,18,21"
-        scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job')
+        scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job', timezone=pytz.UTC)
+        print(f"[SCHEDULER] Set to peak hours (GMT): {hours}:00", flush=True)
     else:
         interval = settings.post_interval_hours if settings else 3
         scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job')
+        print(f"[SCHEDULER] Set to interval: every {interval} hours", flush=True)
 
 # --- Auth Middleware ---
 @app.before_request

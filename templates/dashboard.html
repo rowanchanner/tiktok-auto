@@ -31,8 +31,12 @@
         </div>
 
         <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">
-            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Interval</div>
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Schedule</div>
+            {% if settings and settings.use_peak_hours and settings.peak_hours %}
+            <div style="font-size: 1rem; font-weight: 600;">🕐 Peak hours: {{ settings.peak_hours }}:00 GMT</div>
+            {% else %}
             <div style="font-size: 1.25rem; font-weight: 600;">Every {{ settings.post_interval_hours if settings else 3 }} hours</div>
+            {% endif %}
         </div>
     </div>
 
