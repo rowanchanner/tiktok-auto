@@ -78,11 +78,10 @@ setup_logging()
 # ─── Global Objects ─────────────────────────────────────────────────────────────────────────────
 
 def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
-    """Run the complete discovery -> download -> upload pipeline."""
+    """Run the complete discovery -> download -> upload pipeline for ALL accounts sequentially."""
     logger.info("============================================================")
     
     if not active_accounts:
-        # Default to config account if running locally from CLI
         active_accounts = [getattr(config, "TIKTOK_ACCOUNT", "rowanoutdoors")]
         
     posts_today = tracker.get_posted_count_today()
@@ -93,78 +92,77 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
         logger.info("Reached maximum posts for today. Sleeping until tomorrow.")
         return False
 
-    logger.info("")
-    logger.info("─── Step 1: Discovering viral movie clips ───")
-    # Discover videos
-    video_info = discover_video()
-    if not video_info:
-        logger.warning("No eligible videos found during discovery.")
-        return False
-
-    # Download
-    logger.info("")
-    logger.info("─── Step 2: Downloading video ───")
-    download_result = download_video(video_info)
+    any_success = False
     
-    if not download_result:
-        logger.error("Pipeline failed at download step.")
-        return False
-
-    # Upload
-    logger.info("")
-    logger.info("─── Step 3: Uploading to TikTok ───")
-    
-    # Aggressively clear memory before spawning Chromium
-    import gc
-    gc.collect()
-    
-    # Pick a random active account to post to
-    account_name = random.choice(active_accounts)
-    logger.info(f"Posting to account: @{account_name}")
-    
-    success = upload_video(download_result, account_name=account_name, dry_run=dry_run)
-    
-    if success:
-        # Track the post
-        tracker.mark_posted(
-            video_id=download_result["video_id"],
-            video_url=download_result.get("video_url", ""),
-            description=download_result.get("description", ""),
-            hashtags=download_result.get("hashtags", []),
-        )
-
-        # Clean up downloaded file
-        if not dry_run:
-            cleanup_video(download_result["file_path"])
-
+    for account_name in active_accounts:
         logger.info("")
-        logger.info("=" * 60)
-        mode_label = "DRY RUN COMPLETE" if dry_run else "POSTED SUCCESSFULLY"
-        logger.info(f"🎉 {mode_label}")
-        logger.info("=" * 60)
+        logger.info(f"━━━ Processing account: @{account_name} ━━━")
         
-        # Send Discord notification
-        if not dry_run:
-            try:
-                webhook_url = getattr(config, "DISCORD_WEBHOOK_URL", "")
-                if webhook_url:
-                    import requests
-                    desc = download_result.get("description", "")[:200]
-                    tags = " ".join(download_result.get("hashtags", [])[:5])
-                    profile = f"https://www.tiktok.com/@{account_name}"
-                    requests.post(webhook_url, json={
-                        "content": f"✅ **Posted to @{account_name}!**\n📝 {desc}\n🏷️ {tags}\n🔗 {profile}"
-                    }, timeout=10)
-                    logger.info("📨 Discord notification sent!")
-            except Exception as e:
-                logger.warning(f"Discord webhook failed (non-fatal): {e}")
+        # Check daily limit before each account
+        posts_today = tracker.get_posted_count_today()
+        if posts_today >= max_posts:
+            logger.info("Reached daily limit. Stopping.")
+            break
         
-        return True
-    else:
-        logger.error("❌ Upload failed")
-        # Clean up the downloaded file even on failure
-        cleanup_video(download_result["file_path"])
-        return False
+        # Step 1: Discover
+        logger.info("─── Step 1: Discovering viral movie clips ───")
+        video_info = discover_video()
+        if not video_info:
+            logger.warning(f"No eligible videos found for @{account_name}. Skipping.")
+            continue
+
+        # Step 2: Download
+        logger.info("─── Step 2: Downloading video ───")
+        download_result = download_video(video_info)
+        if not download_result:
+            logger.error(f"Download failed for @{account_name}. Skipping.")
+            continue
+
+        # Step 3: Upload
+        logger.info(f"─── Step 3: Uploading to @{account_name} ───")
+        import gc
+        gc.collect()
+        
+        success = upload_video(download_result, account_name=account_name, dry_run=dry_run)
+        
+        if success:
+            tracker.mark_posted(
+                video_id=download_result["video_id"],
+                video_url=download_result.get("video_url", ""),
+                description=download_result.get("description", ""),
+                hashtags=download_result.get("hashtags", []),
+                account=account_name,
+            )
+            if not dry_run:
+                cleanup_video(download_result["file_path"])
+            
+            logger.info(f"🎉 Posted to @{account_name}!")
+            any_success = True
+            
+            # Discord notification
+            if not dry_run:
+                try:
+                    webhook_url = getattr(config, "DISCORD_WEBHOOK_URL", "")
+                    if webhook_url:
+                        import requests
+                        desc = download_result.get("description", "")[:200]
+                        tags = " ".join(download_result.get("hashtags", [])[:5])
+                        profile = f"https://www.tiktok.com/@{account_name}"
+                        requests.post(webhook_url, json={
+                            "content": f"✅ **Posted to @{account_name}!**\n📝 {desc}\n🏷️ {tags}\n🔗 {profile}"
+                        }, timeout=10)
+                except Exception as e:
+                    logger.warning(f"Discord webhook failed: {e}")
+        else:
+            logger.error(f"❌ Upload failed for @{account_name}")
+            cleanup_video(download_result["file_path"])
+        
+        # Brief pause between accounts
+        if account_name != active_accounts[-1]:
+            logger.info("⏳ Waiting 30s before next account...")
+            time.sleep(30)
+    
+    return any_success
 
 
 # ─── Scheduled Mode ──────────────────────────────────────────────────────────

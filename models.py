@@ -23,6 +23,7 @@ class PostHistory(db.Model):
     video_url = db.Column(db.String(255))
     description = db.Column(db.Text)
     hashtags = db.Column(db.Text)
+    account = db.Column(db.String(100), default='rowanoutdoors')
     posted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class TikTokAccount(db.Model):

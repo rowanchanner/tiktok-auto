@@ -54,7 +54,7 @@
                     <td style="color: var(--text-muted); font-size: 0.875rem;">{{ post.posted_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td>{{ post.video_id }}</td>
                     <td><span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">{{ post.hashtags[:30] }}{% if post.hashtags|length > 30 %}...{% endif %}</span></td>
-                    <td><a href="https://www.tiktok.com/@rowanoutdoors" target="_blank" style="color: var(--primary-color);"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
+                    <td><a href="https://www.tiktok.com/@{{ post.account or 'rowanoutdoors' }}" target="_blank" style="color: var(--primary-color);"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -12,12 +12,13 @@ def get_posted_count_today():
             count += 1
     return count
 
-def mark_posted(video_id, video_url="", description="", hashtags=[]):
+def mark_posted(video_id, video_url="", description="", hashtags=[], account="rowanoutdoors"):
     new_post = PostHistory(
         video_id=video_id,
         video_url=video_url,
         description=description,
-        hashtags=",".join(hashtags) if hashtags else ""
+        hashtags=",".join(hashtags) if hashtags else "",
+        account=account
     )
     db.session.add(new_post)
     db.session.commit()
