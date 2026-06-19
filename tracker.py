@@ -1,11 +1,12 @@
 from models import db, PostHistory, Settings
 from datetime import datetime
 
-def get_posted_count_today():
+def get_posted_count_today(account=None):
     today = datetime.utcnow().date()
-    # Count how many posts happened today
-    # We query all and filter in Python for SQLite compatibility, or use SQLAlchemy func
-    posts = PostHistory.query.all()
+    query = PostHistory.query
+    if account:
+        query = query.filter_by(account=account)
+    posts = query.all()
     count = 0
     for p in posts:
         if p.posted_at and p.posted_at.date() == today:

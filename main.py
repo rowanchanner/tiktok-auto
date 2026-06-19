@@ -104,16 +104,28 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
             logger.info("Reached daily limit. Stopping.")
             break
         
-        # Get per-account hashtags from DB
+        # Get per-account settings from DB
         account_hashtags = None
+        account_post_to = 'tiktok'
+        account_max = 0
         try:
             from models import TikTokAccount
             acc = TikTokAccount.query.filter_by(username=account_name).first()
-            if acc and acc.search_hashtags and acc.search_hashtags.strip():
-                account_hashtags = [h.strip() for h in acc.search_hashtags.split(',') if h.strip()]
-                logger.info(f"Using custom hashtags for @{account_name}: {account_hashtags}")
+            if acc:
+                if acc.search_hashtags and acc.search_hashtags.strip():
+                    account_hashtags = [h.strip() for h in acc.search_hashtags.split(',') if h.strip()]
+                    logger.info(f"Using custom hashtags for @{account_name}: {account_hashtags}")
+                account_post_to = acc.post_to or 'tiktok'
+                account_max = acc.max_posts_per_day or 0
         except:
             pass
+        
+        # Check per-account daily limit
+        if account_max > 0:
+            account_posts = tracker.get_posted_count_today(account=account_name)
+            if account_posts >= account_max:
+                logger.info(f"@{account_name} reached its daily limit ({account_max}). Skipping.")
+                continue
         
         # Step 1: Discover
         logger.info("─── Step 1: Discovering viral movie clips ───")
@@ -129,12 +141,31 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
             logger.error(f"Download failed for @{account_name}. Skipping.")
             continue
 
-        # Step 3: Upload
-        logger.info(f"─── Step 3: Uploading to @{account_name} ───")
-        import gc
-        gc.collect()
+        # Step 3: Upload based on post_to setting
+        tiktok_success = False
+        youtube_success = False
         
-        success = upload_video(download_result, account_name=account_name, dry_run=dry_run)
+        if account_post_to in ('tiktok', 'both'):
+            logger.info(f"─── Step 3: Uploading to TikTok @{account_name} ───")
+            import gc
+            gc.collect()
+            tiktok_success = upload_video(download_result, account_name=account_name, dry_run=dry_run)
+        
+        if account_post_to in ('youtube', 'both'):
+            logger.info(f"─── {'Step 3' if account_post_to == 'youtube' else 'Step 4'}: Uploading to YouTube Shorts ───")
+            if not dry_run:
+                try:
+                    from youtube_uploader import upload_to_youtube
+                    youtube_success = upload_to_youtube(
+                        video_path=download_result["file_path"],
+                        title=download_result.get("description", "")[:100],
+                        description=download_result.get("description", ""),
+                        hashtags=download_result.get("hashtags", []),
+                    )
+                except Exception as e:
+                    logger.warning(f"YouTube upload failed: {e}")
+        
+        success = tiktok_success or youtube_success
         
         if success:
             tracker.mark_posted(
@@ -145,23 +176,13 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
                 account=account_name,
             )
             
-            # YouTube Shorts cross-post (before cleanup so file exists)
-            if not dry_run:
-                try:
-                    from youtube_uploader import upload_to_youtube
-                    upload_to_youtube(
-                        video_path=download_result["file_path"],
-                        title=download_result.get("description", "")[:100],
-                        description=download_result.get("description", ""),
-                        hashtags=download_result.get("hashtags", []),
-                    )
-                except Exception as e:
-                    logger.warning(f"YouTube cross-post skipped: {e}")
-            
             if not dry_run:
                 cleanup_video(download_result["file_path"])
             
-            logger.info(f"🎉 Posted to @{account_name}!")
+            platforms = []
+            if tiktok_success: platforms.append("TikTok")
+            if youtube_success: platforms.append("YouTube")
+            logger.info(f"🎉 Posted to @{account_name} on {' + '.join(platforms)}!")
             any_success = True
             
             # Discord notification

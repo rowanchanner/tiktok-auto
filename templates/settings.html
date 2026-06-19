@@ -1,173 +1,155 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="glass-card" style="max-width: 600px;">
-    <h1>Settings</h1>
+<h1 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-gear"></i> Settings</h1>
+
+<!-- GLOBAL BOT SETTINGS -->
+<div class="glass-card">
+    <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-robot"></i> Bot Configuration</h2>
     <form action="/settings" method="POST">
-        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
-            <input type="checkbox" id="is_running" name="is_running" {% if settings.is_running %}checked{% endif %}>
-            <label for="is_running" style="margin: 0; display: inline; cursor: pointer;">Enable Automatic Posting</label>
-        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="is_running" name="is_running" {% if settings.is_running %}checked{% endif %}>
+                    <label for="is_running" style="margin: 0; display: inline; cursor: pointer; font-weight: 600; font-size: 1rem; color: var(--text-main);">⚡ Enable Automatic Posting</label>
+                </div>
 
-        <div class="form-group">
-            <label for="interval">Post Interval (Hours) <span style="color:var(--text-muted); font-size:0.8rem;">— used when peak hours is OFF</span></label>
-            <input type="number" id="interval" name="interval" class="form-control" value="{{ settings.post_interval_hours if settings else 3 }}" min="1" max="24">
-        </div>
+                <div class="form-group">
+                    <label for="interval">Post Interval (Hours) <span style="color:var(--text-muted); font-size:0.8rem;">— used when peak hours is OFF</span></label>
+                    <input type="number" id="interval" name="interval" class="form-control" value="{{ settings.post_interval_hours if settings else 3 }}" min="1" max="24">
+                </div>
 
-        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
-            <input type="checkbox" id="use_peak_hours" name="use_peak_hours" {% if settings.use_peak_hours %}checked{% endif %} onchange="document.getElementById('peak-grid').style.display = this.checked ? 'block' : 'none'">
-            <label for="use_peak_hours" style="margin: 0; display: inline; cursor: pointer;">🕐 Use Peak Hour Scheduling</label>
-        </div>
+                <div class="form-group">
+                    <label for="max_posts">Max Posts Per Day</label>
+                    <input type="number" id="max_posts" name="max_posts" class="form-control" value="{{ settings.max_posts_per_day if settings else 15 }}" min="1">
+                </div>
 
-        <div id="peak-grid" style="display: {% if settings.use_peak_hours %}block{% else %}none{% endif %}; margin-bottom: 1.5rem;">
-            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; display: block;">Click hours to toggle when the bot should post (GMT). <span style="color: #fbbf24;">Yellow border = recommended peak times.</span></label>
-            <input type="hidden" name="peak_hours" id="peak_hours_input" value="{{ settings.peak_hours or '' }}">
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem;">
-                {% set peaks = [7,10,12,17,18,19,20,21] %}
-                {% for h in range(24) %}
-                <button type="button" class="hour-btn{% if h in peaks %} peak-recommended{% endif %}" data-hour="{{ h }}" onclick="toggleHour(this)" style="
-                    padding: 0.5rem; border-radius: 0.5rem;
-                    border: 2px solid {% if h in peaks %}rgba(251,191,36,0.5){% else %}var(--border-color){% endif %};
-                    cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.15s;
-                    font-family: inherit;
-                ">{{ '%02d' % h }}:00</button>
-                {% endfor %}
+                <div class="form-group">
+                    <label for="min_views">Minimum Views for Viral Clips</label>
+                    <input type="number" id="min_views" name="min_views" class="form-control" value="{{ settings.min_views if settings else 500000 }}" min="10000">
+                </div>
+            </div>
+            <div>
+                <div class="form-group">
+                    <label for="hashtags">Global Discovery Hashtags (comma separated)</label>
+                    <input type="text" id="hashtags" name="hashtags" class="form-control" value="{{ settings.hashtags if settings else 'movieclips,moviescenes,filmtok' }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="extra_hashtags">Global Extra Hashtags to Add to Posts</label>
+                    <input type="text" id="extra_hashtags" name="extra_hashtags" class="form-control" value="{{ settings.extra_hashtags if settings else '' }}" placeholder="e.g., #foryou,#viral">
+                </div>
+
+                <div class="form-group">
+                    <label for="discord_webhook_url">Discord Webhook URL</label>
+                    <input type="text" id="discord_webhook_url" name="discord_webhook_url" class="form-control" value="{{ settings.discord_webhook_url if settings else '' }}" placeholder="https://discord.com/api/webhooks/...">
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="discord_screenshots" name="discord_screenshots" {% if settings.discord_screenshots %}checked{% endif %}>
+                    <label for="discord_screenshots" style="margin: 0; display: inline; cursor: pointer;">📸 Send browser screenshots to Discord</label>
+                </div>
             </div>
         </div>
 
-        <script>
-        (function() {
-            var saved = "{{ settings.peak_hours or '' }}";
-            var active = saved ? saved.split(',').map(Number) : [];
-            document.querySelectorAll('.hour-btn').forEach(function(btn) {
-                var h = parseInt(btn.dataset.hour);
-                var isPeak = btn.classList.contains('peak-recommended');
-                if (active.indexOf(h) !== -1) {
-                    btn.style.background = 'rgba(16,185,129,0.3)';
-                    btn.style.color = '#34d399';
-                    btn.style.borderColor = '#10b981';
-                } else {
-                    btn.style.background = 'rgba(0,0,0,0.2)';
-                    btn.style.color = 'var(--text-muted)';
-                    if (!isPeak) btn.style.borderColor = 'var(--border-color)';
-                }
-            });
-        })();
-        function toggleHour(btn) {
-            var h = parseInt(btn.dataset.hour);
-            var input = document.getElementById('peak_hours_input');
-            var hours = input.value ? input.value.split(',').map(Number) : [];
-            var idx = hours.indexOf(h);
-            if (idx > -1) {
-                hours.splice(idx, 1);
-                btn.style.background = 'rgba(0,0,0,0.2)';
-                btn.style.color = 'var(--text-muted)';
-                btn.style.borderColor = btn.classList.contains('peak-recommended') ? 'rgba(251,191,36,0.5)' : 'var(--border-color)';
-            } else {
-                hours.push(h);
-                btn.style.background = 'rgba(16,185,129,0.3)';
-                btn.style.color = '#34d399';
-                btn.style.borderColor = '#10b981';
-            }
-            hours.sort(function(a,b){return a-b});
-            input.value = hours.join(',');
-        }
-        </script>
-
-        <div class="form-group">
-            <label for="max_posts">Max Posts Per Day</label>
-            <input type="number" id="max_posts" name="max_posts" class="form-control" value="{{ settings.max_posts_per_day if settings else 15 }}" min="1">
+        <!-- PEAK HOURS -->
+        <div style="margin-top: 1rem; padding: 1.25rem; background: rgba(0,0,0,0.2); border-radius: 0.75rem; border: 1px solid var(--border-color);">
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <input type="checkbox" id="use_peak_hours" name="use_peak_hours" {% if settings.use_peak_hours %}checked{% endif %} onchange="document.getElementById('peak-grid').style.display = this.checked ? 'block' : 'none'">
+                <label for="use_peak_hours" style="margin: 0; display: inline; cursor: pointer; font-weight: 600; color: var(--text-main);">🕐 Use Peak Hour Scheduling</label>
+            </div>
+            <div id="peak-grid" style="display: {% if settings.use_peak_hours %}block{% else %}none{% endif %};">
+                <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; display: block;">Click hours to toggle when the bot should post (GMT). <span style="color: #fbbf24;">Yellow border = recommended peak times.</span></label>
+                <input type="hidden" name="peak_hours" id="peak_hours_input" value="{{ settings.peak_hours or '' }}">
+                <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.4rem;">
+                    {% set peaks = [7,10,12,17,18,19,20,21] %}
+                    {% for h in range(24) %}
+                    <button type="button" class="hour-btn{% if h in peaks %} peak-recommended{% endif %}" data-hour="{{ h }}" onclick="toggleHour(this)" style="
+                        padding: 0.4rem; border-radius: 0.4rem;
+                        border: 2px solid {% if h in peaks %}rgba(251,191,36,0.5){% else %}var(--border-color){% endif %};
+                        cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: all 0.15s;
+                        font-family: inherit;
+                    ">{{ '%02d' % h }}:00</button>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="min_views">Minimum Views for Viral Clips</label>
-            <input type="number" id="min_views" name="min_views" class="form-control" value="{{ settings.min_views if settings else 500000 }}" min="10000">
-        </div>
-
-        <div class="form-group">
-            <label for="hashtags">Discovery Hashtags (comma separated)</label>
-            <input type="text" id="hashtags" name="hashtags" class="form-control" value="{{ settings.hashtags if settings else 'movieclips,moviescenes,filmtok' }}">
-        </div>
-
-        <div class="form-group">
-            <label for="extra_hashtags">Extra Hashtags to Add to Posts (comma separated)</label>
-            <input type="text" id="extra_hashtags" name="extra_hashtags" class="form-control" value="{{ settings.extra_hashtags if settings else '' }}" placeholder="e.g., #foryou,#viral">
-        </div>
-
-        <div class="form-group">
-            <label for="discord_webhook_url">Discord Webhook URL (Optional)</label>
-            <input type="text" id="discord_webhook_url" name="discord_webhook_url" class="form-control" value="{{ settings.discord_webhook_url if settings else '' }}" placeholder="https://discord.com/api/webhooks/...">
-        </div>
-
-        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
-            <input type="checkbox" id="discord_screenshots" name="discord_screenshots" {% if settings.discord_screenshots %}checked{% endif %}>
-            <label for="discord_screenshots" style="margin: 0; display: inline; cursor: pointer;">Send browser screenshots to Discord during uploads</label>
-        </div>
-
-        <div style="margin-top: 1.5rem; padding: 1.25rem; background: rgba(255,0,0,0.05); border: 1px solid rgba(255,68,68,0.2); border-radius: 0.5rem;">
+        <!-- YOUTUBE -->
+        <div style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,0,0,0.03); border: 1px solid rgba(255,68,68,0.15); border-radius: 0.75rem;">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                 <i class="fa-brands fa-youtube" style="font-size: 1.5rem; color: #f00;"></i>
-                <h3 style="margin: 0;">YouTube Shorts Cross-Posting</h3>
+                <h3 style="margin: 0;">YouTube Shorts</h3>
             </div>
             {% if settings.youtube_token %}
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
                 <span class="badge badge-success">Connected</span>
                 <a href="/youtube_connect" style="font-size: 0.8rem; color: var(--text-muted);">Reconnect</a>
             </div>
-            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">
-                <input type="checkbox" id="youtube_enabled" name="youtube_enabled" {% if settings.youtube_enabled %}checked{% endif %}>
-                <label for="youtube_enabled" style="margin: 0; display: inline; cursor: pointer;">Auto-upload to YouTube Shorts after TikTok post</label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="youtube_enabled" name="youtube_enabled" {% if settings.youtube_enabled %}checked{% endif %}>
+                    <label for="youtube_enabled" style="margin: 0; display: inline; cursor: pointer;">Auto-upload to YouTube Shorts after TikTok post</label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="youtube_only" name="youtube_only" {% if settings.youtube_only %}checked{% endif %}>
+                    <label for="youtube_only" style="margin: 0; display: inline; cursor: pointer;">📺 YouTube ONLY mode (skip TikTok upload)</label>
+                </div>
             </div>
             {% else %}
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">Connect your Google/YouTube account to cross-post videos as YouTube Shorts automatically.</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">Connect your Google/YouTube account to cross-post videos as YouTube Shorts.</p>
             <a href="/youtube_connect" class="btn" style="background: #cc0000; color: white;"><i class="fa-brands fa-youtube"></i> Connect YouTube</a>
             {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-success" style="margin-top: 1.5rem; width: 100%;"><i class="fa-solid fa-floppy-disk"></i> Save Bot Settings</button>
+        <button type="submit" class="btn btn-success" style="margin-top: 1.5rem; width: 100%; justify-content: center; padding: 0.75rem; font-size: 1rem;"><i class="fa-solid fa-floppy-disk"></i> Save Bot Settings</button>
+    </form>
+</div>
 
-        <div style="margin-top: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0;">Burner Proxy Pool</h2>
-                <span class="badge badge-primary" style="font-size: 1rem;">{{ proxy_count }} Remaining</span>
-            </div>
-            <p style="color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 1.5rem;">Paste thousands of proxies below. The bot will automatically pull one for each upload and then permanently delete it from the database.</p>
-            
-            <div class="form-group">
-                <textarea name="bulk_proxies" class="form-control" rows="5" placeholder="user:pass@host:port&#10;user:pass@host:port&#10;..."></textarea>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <button type="submit" name="add_proxies" class="btn btn-success" style="flex: 1;"><i class="fa-solid fa-plus"></i> Add Proxies</button>
-                <button type="submit" name="clear_proxies" class="btn" style="background: rgba(239, 68, 68, 0.2); color: #f87171;" formnovalidate onclick="return confirm('Delete all unused proxies?')"><i class="fa-solid fa-trash"></i> Clear All</button>
-            </div>
+<!-- PROXY POOL -->
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="margin: 0;"><i class="fa-solid fa-shield-halved"></i> Burner Proxy Pool</h2>
+        <span class="badge badge-primary" style="font-size: 1rem;">{{ proxy_count }} Remaining</span>
+    </div>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Paste proxies below. The bot pulls one per upload then permanently deletes it.</p>
+    <form action="/settings" method="POST">
+        <div class="form-group">
+            <textarea name="bulk_proxies" class="form-control" rows="4" placeholder="user:pass@host:port&#10;user:pass@host:port&#10;..."></textarea>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" name="add_proxies" class="btn btn-success" style="flex: 1;"><i class="fa-solid fa-plus"></i> Add Proxies</button>
+            <button type="submit" name="clear_proxies" class="btn" style="background: rgba(239, 68, 68, 0.2); color: #f87171;" formnovalidate onclick="return confirm('Delete all unused proxies?')"><i class="fa-solid fa-trash"></i> Clear All</button>
         </div>
     </form>
 </div>
 
-<div class="glass-card" style="margin-top: 2rem;">
-    <h2>TikTok Accounts</h2>
-    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Upload the cookie files generated by `setup_account.py` to add new accounts. The bot will cycle through all active accounts.</p>
+<!-- ACCOUNTS -->
+<div class="glass-card">
+    <h2 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-users"></i> TikTok Accounts <span class="badge badge-primary" style="font-size: 0.85rem; vertical-align: middle;">{{ accounts|length }}</span></h2>
+    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Upload JSON cookie files to add accounts. The bot cycles through all active accounts sequentially.</p>
 
     <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
         <form method="POST" enctype="multipart/form-data" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
-            <div class="form-group" style="margin: 0; flex: 1;">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 150px;">
                 <label for="account_username">TikTok Username</label>
                 <input type="text" id="account_username" name="account_username" class="form-control" required placeholder="e.g., rowanoutdoors">
             </div>
-            <div class="form-group" style="margin: 0; flex: 1;">
+            <div class="form-group" style="margin: 0; flex: 1; min-width: 150px;">
                 <label for="cookie_file">CookieFile.json</label>
                 <input type="file" id="cookie_file" name="cookie_file" accept=".json" class="form-control" required style="padding: 0.4rem;">
             </div>
-            <button type="submit" name="upload_cookie" class="btn btn-success" style="height: 42px;">Add Account</button>
+            <button type="submit" name="upload_cookie" class="btn btn-success" style="height: 42px;"><i class="fa-solid fa-plus"></i> Add Account</button>
         </form>
     </div>
 
     {% if accounts %}
-    <div class="table-container">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1rem;">
         {% for account in accounts %}
-        <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+        <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fa-brands fa-tiktok" style="font-size: 1.2rem;"></i>
                     <strong>@{{ account.username }}</strong>
                     {% if account.is_active %}
                     <span class="badge badge-success">Active</span>
@@ -177,27 +159,80 @@
                 </div>
                 <form method="POST" style="display: flex; gap: 0.5rem;">
                     <input type="hidden" name="account_id" value="{{ account.id }}">
-                    <button type="submit" name="toggle_account" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--bg-color);">Toggle</button>
-                    <button type="submit" name="delete_account" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;" onclick="return confirm('Delete this account?')">Delete</button>
+                    <button type="submit" name="toggle_account" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--bg-color);">{% if account.is_active %}Pause{% else %}Resume{% endif %}</button>
+                    <button type="submit" name="delete_account" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: rgba(239,68,68,0.2); color: #f87171;" onclick="return confirm('Delete @{{ account.username }}?')"><i class="fa-solid fa-trash"></i></button>
                 </form>
             </div>
-            <form method="POST" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <form method="POST">
                 <input type="hidden" name="account_id" value="{{ account.id }}">
-                <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label style="font-size: 0.75rem;">Search Hashtags <span style="color:var(--text-muted);">(blank = global)</span></label>
-                    <input type="text" name="account_search_hashtags" class="form-control" value="{{ account.search_hashtags or '' }}" placeholder="e.g., movieclips,filmtok,moviescenes" style="font-size: 0.85rem;">
+                    <input type="text" name="account_search_hashtags" class="form-control" value="{{ account.search_hashtags or '' }}" placeholder="movieclips,filmtok" style="font-size: 0.85rem;">
                 </div>
-                <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label style="font-size: 0.75rem;">Extra Hashtags <span style="color:var(--text-muted);">(blank = global)</span></label>
-                    <input type="text" name="account_extra_hashtags" class="form-control" value="{{ account.extra_hashtags or '' }}" placeholder="e.g., #foryou,#viral" style="font-size: 0.85rem;">
+                    <input type="text" name="account_extra_hashtags" class="form-control" value="{{ account.extra_hashtags or '' }}" placeholder="#foryou,#viral" style="font-size: 0.85rem;">
                 </div>
-                <button type="submit" name="save_account_hashtags" class="btn" style="align-self: flex-end; height: 38px; font-size: 0.8rem;"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Max Posts/Day <span style="color:var(--text-muted);">(0 = global)</span></label>
+                        <input type="number" name="account_max_posts" class="form-control" value="{{ account.max_posts_per_day or 0 }}" min="0" style="font-size: 0.85rem;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.75rem;">Post To</label>
+                        <select name="account_post_to" class="form-control" style="font-size: 0.85rem;">
+                            <option value="tiktok" {% if (account.post_to or 'tiktok') == 'tiktok' %}selected{% endif %}>TikTok Only</option>
+                            <option value="both" {% if (account.post_to or '') == 'both' %}selected{% endif %}>TikTok + YouTube</option>
+                            <option value="youtube" {% if (account.post_to or '') == 'youtube' %}selected{% endif %}>YouTube Only</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" name="save_account_settings" class="btn" style="width: 100%; justify-content: center; font-size: 0.8rem; background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3);"><i class="fa-solid fa-floppy-disk"></i> Save Account Settings</button>
             </form>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <p style="color: var(--text-muted);">No accounts added yet. Please upload a cookie file.</p>
+    <p style="color: var(--text-muted);">No accounts added yet. Upload a cookie file above to get started.</p>
     {% endif %}
 </div>
+
+<script>
+(function() {
+    var saved = "{{ settings.peak_hours or '' }}";
+    var active = saved ? saved.split(',').map(Number) : [];
+    document.querySelectorAll('.hour-btn').forEach(function(btn) {
+        var h = parseInt(btn.dataset.hour);
+        var isPeak = btn.classList.contains('peak-recommended');
+        if (active.indexOf(h) !== -1) {
+            btn.style.background = 'rgba(16,185,129,0.3)';
+            btn.style.color = '#34d399';
+            btn.style.borderColor = '#10b981';
+        } else {
+            btn.style.background = 'rgba(0,0,0,0.2)';
+            btn.style.color = 'var(--text-muted)';
+            if (!isPeak) btn.style.borderColor = 'var(--border-color)';
+        }
+    });
+})();
+function toggleHour(btn) {
+    var h = parseInt(btn.dataset.hour);
+    var input = document.getElementById('peak_hours_input');
+    var hours = input.value ? input.value.split(',').map(Number) : [];
+    var idx = hours.indexOf(h);
+    if (idx > -1) {
+        hours.splice(idx, 1);
+        btn.style.background = 'rgba(0,0,0,0.2)';
+        btn.style.color = 'var(--text-muted)';
+        btn.style.borderColor = btn.classList.contains('peak-recommended') ? 'rgba(251,191,36,0.5)' : 'var(--border-color)';
+    } else {
+        hours.push(h);
+        btn.style.background = 'rgba(16,185,129,0.3)';
+        btn.style.color = '#34d399';
+        btn.style.borderColor = '#10b981';
+    }
+    hours.sort(function(a,b){return a-b});
+    input.value = hours.join(',');
+}
+</script>
 {% endblock %}

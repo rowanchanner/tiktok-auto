@@ -16,6 +16,7 @@ class Settings(db.Model):
     use_peak_hours = db.Column(db.Boolean, default=False)
     peak_hours = db.Column(db.Text, default="")  # comma-separated hours like "9,12,18,21"
     youtube_enabled = db.Column(db.Boolean, default=False)
+    youtube_only = db.Column(db.Boolean, default=False)
     youtube_token = db.Column(db.Text, default="")  # JSON OAuth token for YouTube API
 
 class Proxy(db.Model):
@@ -38,3 +39,5 @@ class TikTokAccount(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     search_hashtags = db.Column(db.Text, default='')  # blank = use global
     extra_hashtags = db.Column(db.Text, default='')    # blank = use global
+    max_posts_per_day = db.Column(db.Integer, default=0)  # 0 = use global
+    post_to = db.Column(db.String(20), default='tiktok')  # tiktok, both, youtube

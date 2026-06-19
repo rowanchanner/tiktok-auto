@@ -114,6 +114,17 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN youtube_only BOOLEAN DEFAULT 0'))
+        db.session.commit()
+    except:
+        db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE tik_tok_account ADD COLUMN max_posts_per_day INTEGER DEFAULT 0'))
+        db.session.execute(text('ALTER TABLE tik_tok_account ADD COLUMN post_to TEXT DEFAULT "tiktok"'))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -274,6 +285,7 @@ def settings():
                         account = TikTokAccount(username=username, cookie_file=filename, is_active=True)
                         db.session.add(account)
                     db.session.commit()
+                return redirect(url_for('settings'))
             elif 'delete_account' in request.form:
                 account_id = request.form.get('account_id')
                 account = TikTokAccount.query.get(account_id)
@@ -288,19 +300,24 @@ def settings():
                         pass
                     db.session.delete(account)
                     db.session.commit()
+                return redirect(url_for('settings'))
             elif 'toggle_account' in request.form:
                 account_id = request.form.get('account_id')
                 account = TikTokAccount.query.get(account_id)
                 if account:
                     account.is_active = not account.is_active
                     db.session.commit()
-            elif 'save_account_hashtags' in request.form:
+                return redirect(url_for('settings'))
+            elif 'save_account_settings' in request.form:
                 account_id = request.form.get('account_id')
                 account = TikTokAccount.query.get(account_id)
                 if account:
                     account.search_hashtags = request.form.get('account_search_hashtags', '')
                     account.extra_hashtags = request.form.get('account_extra_hashtags', '')
+                    account.max_posts_per_day = int(request.form.get('account_max_posts', 0) or 0)
+                    account.post_to = request.form.get('account_post_to', 'tiktok')
                     db.session.commit()
+                return redirect(url_for('settings'))
             elif 'add_proxies' in request.form:
                 bulk = request.form.get('bulk_proxies', '')
                 for line in bulk.split('\n'):
@@ -311,17 +328,19 @@ def settings():
                         line = f"http://{line}"
                     db.session.add(Proxy(proxy_url=line))
                 db.session.commit()
+                return redirect(url_for('settings'))
             elif 'clear_proxies' in request.form:
                 Proxy.query.delete()
                 db.session.commit()
+                return redirect(url_for('settings'))
 
+            # Global settings save (only reached by the main Save Bot Settings button)
             settings_obj.post_interval_hours = int(request.form.get('interval', settings_obj.post_interval_hours))
             settings_obj.max_posts_per_day = int(request.form.get('max_posts', settings_obj.max_posts_per_day))
             settings_obj.hashtags = request.form.get('hashtags', settings_obj.hashtags)
             settings_obj.extra_hashtags = request.form.get('extra_hashtags', settings_obj.extra_hashtags)
             settings_obj.min_views = int(request.form.get('min_views', settings_obj.min_views))
-            if 'interval' in request.form:
-                settings_obj.is_running = 'is_running' in request.form
+            settings_obj.is_running = 'is_running' in request.form
             webhook_val = request.form.get('discord_webhook_url')
             if webhook_val is not None:
                 settings_obj.discord_webhook_url = webhook_val
@@ -335,12 +354,12 @@ def settings():
             
             # YouTube
             settings_obj.youtube_enabled = 'youtube_enabled' in request.form
+            settings_obj.youtube_only = 'youtube_only' in request.form
             
             db.session.commit()
             
             # Reschedule based on mode
-            if 'interval' in request.form or 'use_peak_hours' in request.form:
-                _schedule_bot_job(settings_obj)
+            _schedule_bot_job(settings_obj)
             return redirect(url_for('settings'))
             
         proxy_count = Proxy.query.count()
