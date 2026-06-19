@@ -29,7 +29,7 @@
         <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Next Scheduled Post</div>
         <div style="font-size: 1.1rem; font-weight: 600;">
             {% if next_run %}
-                {{ next_run.strftime('%d %b %H:%M') }} GMT
+                <span id="next-run" data-utc="{{ next_run.strftime('%Y-%m-%dT%H:%M:%SZ') }}">{{ next_run.strftime('%d %b %H:%M') }} GMT</span>
             {% else %}
                 Not scheduled
             {% endif %}
@@ -39,7 +39,7 @@
     <div class="glass-card" style="margin-bottom: 0;">
         <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">Schedule</div>
         {% if settings and settings.use_peak_hours and settings.peak_hours %}
-        <div style="font-size: 0.95rem; font-weight: 600;">🕐 Peak: {{ settings.peak_hours }}:00 GMT</div>
+        <div style="font-size: 0.95rem; font-weight: 600;" id="peak-display" data-hours="{{ settings.peak_hours }}">🕐 Peak: {{ settings.peak_hours }}:00 GMT</div>
         {% else %}
         <div style="font-size: 1.25rem; font-weight: 600;">Every {{ settings.post_interval_hours if settings else 3 }}h</div>
         {% endif %}
@@ -84,4 +84,26 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+// Convert next run time to local
+var el = document.getElementById('next-run');
+if (el) {
+    var utc = el.dataset.utc;
+    var d = new Date(utc);
+    var opts = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
+    el.textContent = d.toLocaleDateString('en-GB', opts).replace(',', '');
+}
+
+// Convert peak hours to local
+var peakEl = document.getElementById('peak-display');
+if (peakEl) {
+    var gmtHours = peakEl.dataset.hours.split(',').map(Number);
+    var offset = -(new Date().getTimezoneOffset() / 60); // e.g. +1 for BST
+    var localHours = gmtHours.map(function(h) { return ((h + offset) % 24 + 24) % 24; });
+    localHours.sort(function(a,b){ return a-b; });
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    peakEl.textContent = '🕐 Peak: ' + localHours.join(',') + ':00 (' + tz + ')';
+}
+</script>
 {% endblock %}
