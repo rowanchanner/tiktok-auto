@@ -150,11 +150,11 @@ def _schedule_bot_job(settings):
     try:
         if settings and settings.use_peak_hours and settings.peak_hours:
             hours = settings.peak_hours.strip()
-            scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job', timezone='UTC')
+            scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job', timezone='UTC', replace_existing=True)
             print(f"[SCHEDULER] Set to peak hours (GMT): {hours}:00", flush=True)
         else:
             interval = settings.post_interval_hours if settings else 3
-            scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job')
+            scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job', replace_existing=True)
             print(f"[SCHEDULER] Set to interval: every {interval} hours", flush=True)
         
         job = scheduler.get_job('tiktok_job')
@@ -163,7 +163,7 @@ def _schedule_bot_job(settings):
     except Exception as e:
         print(f"[SCHEDULER] ERROR: {e}", flush=True)
         # Fallback to interval
-        scheduler.add_job(bot_job, 'interval', hours=3, id='tiktok_job')
+        scheduler.add_job(bot_job, 'interval', hours=3, id='tiktok_job', replace_existing=True)
         print("[SCHEDULER] Fell back to 3 hour interval", flush=True)
 
 # --- Auth Middleware ---
