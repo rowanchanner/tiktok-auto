@@ -89,6 +89,12 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN use_peak_hours BOOLEAN DEFAULT 0'))
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN peak_hours TEXT DEFAULT ""'))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -112,9 +118,23 @@ def initialize_db():
     
     if not scheduler.running:
         settings = Settings.query.first()
+        _schedule_bot_job(settings)
+        scheduler.start()
+
+def _schedule_bot_job(settings):
+    """Add or replace the bot job based on peak hours vs interval mode."""
+    try:
+        scheduler.remove_job('tiktok_job')
+    except:
+        pass
+    
+    if settings and settings.use_peak_hours and settings.peak_hours:
+        hours = settings.peak_hours.strip()
+        # Convert "9,12,18,21" to cron hour field "9,12,18,21"
+        scheduler.add_job(bot_job, 'cron', hour=hours, minute=0, id='tiktok_job')
+    else:
         interval = settings.post_interval_hours if settings else 3
         scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job')
-        scheduler.start()
 
 # --- Auth Middleware ---
 @app.before_request
@@ -251,9 +271,18 @@ def settings():
             if webhook_val is not None:
                 settings_obj.discord_webhook_url = webhook_val
             settings_obj.discord_screenshots = 'discord_screenshots' in request.form
+            
+            # Peak hours
+            settings_obj.use_peak_hours = 'use_peak_hours' in request.form
+            peak_hours_val = request.form.get('peak_hours', '')
+            if peak_hours_val is not None:
+                settings_obj.peak_hours = peak_hours_val
+            
             db.session.commit()
-            if 'interval' in request.form:
-                scheduler.reschedule_job('tiktok_job', trigger='interval', hours=settings_obj.post_interval_hours)
+            
+            # Reschedule based on mode
+            if 'interval' in request.form or 'use_peak_hours' in request.form:
+                _schedule_bot_job(settings_obj)
             return redirect(url_for('settings'))
             
         proxy_count = Proxy.query.count()

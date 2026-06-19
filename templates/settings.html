@@ -10,9 +10,66 @@
         </div>
 
         <div class="form-group">
-            <label for="interval">Post Interval (Hours)</label>
+            <label for="interval">Post Interval (Hours) <span style="color:var(--text-muted); font-size:0.8rem;">— used when peak hours is OFF</span></label>
             <input type="number" id="interval" name="interval" class="form-control" value="{{ settings.post_interval_hours if settings else 3 }}" min="1" max="24">
         </div>
+
+        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="use_peak_hours" name="use_peak_hours" {% if settings.use_peak_hours %}checked{% endif %} onchange="document.getElementById('peak-grid').style.display = this.checked ? 'block' : 'none'">
+            <label for="use_peak_hours" style="margin: 0; display: inline; cursor: pointer;">🕐 Use Peak Hour Scheduling</label>
+        </div>
+
+        <div id="peak-grid" style="display: {% if settings.use_peak_hours %}block{% else %}none{% endif %}; margin-bottom: 1.5rem;">
+            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; display: block;">Click hours to toggle when the bot should post (UTC):</label>
+            <input type="hidden" name="peak_hours" id="peak_hours_input" value="{{ settings.peak_hours or '' }}">
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem;">
+                {% for h in range(24) %}
+                <button type="button" class="hour-btn" data-hour="{{ h }}" onclick="toggleHour(this)" style="
+                    padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);
+                    cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.15s;
+                    font-family: inherit;
+                ">{{ '%02d' % h }}:00</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <script>
+        (function() {
+            var saved = "{{ settings.peak_hours or '' }}";
+            var active = saved ? saved.split(',').map(Number) : [];
+            document.querySelectorAll('.hour-btn').forEach(function(btn) {
+                var h = parseInt(btn.dataset.hour);
+                if (active.indexOf(h) !== -1) {
+                    btn.style.background = 'rgba(16,185,129,0.3)';
+                    btn.style.color = '#34d399';
+                    btn.style.borderColor = '#10b981';
+                } else {
+                    btn.style.background = 'rgba(0,0,0,0.2)';
+                    btn.style.color = 'var(--text-muted)';
+                    btn.style.borderColor = 'var(--border-color)';
+                }
+            });
+        })();
+        function toggleHour(btn) {
+            var h = parseInt(btn.dataset.hour);
+            var input = document.getElementById('peak_hours_input');
+            var hours = input.value ? input.value.split(',').map(Number) : [];
+            var idx = hours.indexOf(h);
+            if (idx > -1) {
+                hours.splice(idx, 1);
+                btn.style.background = 'rgba(0,0,0,0.2)';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.borderColor = 'var(--border-color)';
+            } else {
+                hours.push(h);
+                btn.style.background = 'rgba(16,185,129,0.3)';
+                btn.style.color = '#34d399';
+                btn.style.borderColor = '#10b981';
+            }
+            hours.sort(function(a,b){return a-b});
+            input.value = hours.join(',');
+        }
+        </script>
 
         <div class="form-group">
             <label for="max_posts">Max Posts Per Day</label>

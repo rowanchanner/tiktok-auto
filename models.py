@@ -13,6 +13,8 @@ class Settings(db.Model):
     is_running = db.Column(db.Boolean, default=True)
     discord_webhook_url = db.Column(db.String(255), default="")
     discord_screenshots = db.Column(db.Boolean, default=False)
+    use_peak_hours = db.Column(db.Boolean, default=False)
+    peak_hours = db.Column(db.Text, default="")  # comma-separated hours like "9,12,18,21"
 
 class Proxy(db.Model):
     id = db.Column(db.Integer, primary_key=True)
