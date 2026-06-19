@@ -156,15 +156,13 @@ def _schedule_bot_job(settings):
             interval = settings.post_interval_hours if settings else 3
             scheduler.add_job(bot_job, 'interval', hours=interval, id='tiktok_job', replace_existing=True)
             print(f"[SCHEDULER] Set to interval: every {interval} hours", flush=True)
-        
-        job = scheduler.get_job('tiktok_job')
-        if job:
-            print(f"[SCHEDULER] Next run: {job.next_run_time}", flush=True)
     except Exception as e:
         print(f"[SCHEDULER] ERROR: {e}", flush=True)
-        # Fallback to interval
-        scheduler.add_job(bot_job, 'interval', hours=3, id='tiktok_job', replace_existing=True)
-        print("[SCHEDULER] Fell back to 3 hour interval", flush=True)
+        try:
+            scheduler.add_job(bot_job, 'interval', hours=3, id='tiktok_job', replace_existing=True)
+            print("[SCHEDULER] Fell back to 3 hour interval", flush=True)
+        except:
+            pass
 
 # --- Auth Middleware ---
 @app.before_request
