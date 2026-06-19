@@ -20,12 +20,14 @@
         </div>
 
         <div id="peak-grid" style="display: {% if settings.use_peak_hours %}block{% else %}none{% endif %}; margin-bottom: 1.5rem;">
-            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; display: block;">Click hours to toggle when the bot should post (UTC):</label>
+            <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; display: block;">Click hours to toggle when the bot should post (GMT). <span style="color: #fbbf24;">Yellow border = recommended peak times.</span></label>
             <input type="hidden" name="peak_hours" id="peak_hours_input" value="{{ settings.peak_hours or '' }}">
             <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem;">
+                {% set peaks = [7,10,12,17,18,19,20,21] %}
                 {% for h in range(24) %}
-                <button type="button" class="hour-btn" data-hour="{{ h }}" onclick="toggleHour(this)" style="
-                    padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border-color);
+                <button type="button" class="hour-btn{% if h in peaks %} peak-recommended{% endif %}" data-hour="{{ h }}" onclick="toggleHour(this)" style="
+                    padding: 0.5rem; border-radius: 0.5rem;
+                    border: 2px solid {% if h in peaks %}rgba(251,191,36,0.5){% else %}var(--border-color){% endif %};
                     cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.15s;
                     font-family: inherit;
                 ">{{ '%02d' % h }}:00</button>
@@ -39,6 +41,7 @@
             var active = saved ? saved.split(',').map(Number) : [];
             document.querySelectorAll('.hour-btn').forEach(function(btn) {
                 var h = parseInt(btn.dataset.hour);
+                var isPeak = btn.classList.contains('peak-recommended');
                 if (active.indexOf(h) !== -1) {
                     btn.style.background = 'rgba(16,185,129,0.3)';
                     btn.style.color = '#34d399';
@@ -46,7 +49,7 @@
                 } else {
                     btn.style.background = 'rgba(0,0,0,0.2)';
                     btn.style.color = 'var(--text-muted)';
-                    btn.style.borderColor = 'var(--border-color)';
+                    if (!isPeak) btn.style.borderColor = 'var(--border-color)';
                 }
             });
         })();
@@ -59,7 +62,7 @@
                 hours.splice(idx, 1);
                 btn.style.background = 'rgba(0,0,0,0.2)';
                 btn.style.color = 'var(--text-muted)';
-                btn.style.borderColor = 'var(--border-color)';
+                btn.style.borderColor = btn.classList.contains('peak-recommended') ? 'rgba(251,191,36,0.5)' : 'var(--border-color)';
             } else {
                 hours.push(h);
                 btn.style.background = 'rgba(16,185,129,0.3)';
@@ -99,6 +102,26 @@
         <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
             <input type="checkbox" id="discord_screenshots" name="discord_screenshots" {% if settings.discord_screenshots %}checked{% endif %}>
             <label for="discord_screenshots" style="margin: 0; display: inline; cursor: pointer;">Send browser screenshots to Discord during uploads</label>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding: 1.25rem; background: rgba(255,0,0,0.05); border: 1px solid rgba(255,68,68,0.2); border-radius: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <i class="fa-brands fa-youtube" style="font-size: 1.5rem; color: #f00;"></i>
+                <h3 style="margin: 0;">YouTube Shorts Cross-Posting</h3>
+            </div>
+            {% if settings.youtube_token %}
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <span class="badge badge-success">Connected</span>
+                <a href="/youtube_connect" style="font-size: 0.8rem; color: var(--text-muted);">Reconnect</a>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                <input type="checkbox" id="youtube_enabled" name="youtube_enabled" {% if settings.youtube_enabled %}checked{% endif %}>
+                <label for="youtube_enabled" style="margin: 0; display: inline; cursor: pointer;">Auto-upload to YouTube Shorts after TikTok post</label>
+            </div>
+            {% else %}
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">Connect your Google/YouTube account to cross-post videos as YouTube Shorts automatically.</p>
+            <a href="/youtube_connect" class="btn" style="background: #cc0000; color: white;"><i class="fa-brands fa-youtube"></i> Connect YouTube</a>
+            {% endif %}
         </div>
 
         <button type="submit" class="btn btn-success" style="margin-top: 1.5rem; width: 100%;"><i class="fa-solid fa-floppy-disk"></i> Save Bot Settings</button>

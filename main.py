@@ -144,6 +144,20 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
                 hashtags=download_result.get("hashtags", []),
                 account=account_name,
             )
+            
+            # YouTube Shorts cross-post (before cleanup so file exists)
+            if not dry_run:
+                try:
+                    from youtube_uploader import upload_to_youtube
+                    upload_to_youtube(
+                        video_path=download_result["file_path"],
+                        title=download_result.get("description", "")[:100],
+                        description=download_result.get("description", ""),
+                        hashtags=download_result.get("hashtags", []),
+                    )
+                except Exception as e:
+                    logger.warning(f"YouTube cross-post skipped: {e}")
+            
             if not dry_run:
                 cleanup_video(download_result["file_path"])
             

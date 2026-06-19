@@ -15,6 +15,8 @@ class Settings(db.Model):
     discord_screenshots = db.Column(db.Boolean, default=False)
     use_peak_hours = db.Column(db.Boolean, default=False)
     peak_hours = db.Column(db.Text, default="")  # comma-separated hours like "9,12,18,21"
+    youtube_enabled = db.Column(db.Boolean, default=False)
+    youtube_token = db.Column(db.Text, default="")  # JSON OAuth token for YouTube API
 
 class Proxy(db.Model):
     id = db.Column(db.Integer, primary_key=True)

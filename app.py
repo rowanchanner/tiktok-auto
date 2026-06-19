@@ -38,6 +38,19 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'},
 )
 
+# YouTube OAuth (separate registration with upload scope)
+youtube_oauth = oauth.register(
+    name='youtube',
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'https://www.googleapis.com/auth/youtube.upload',
+        'access_type': 'offline',
+        'prompt': 'consent',
+    },
+)
+
 # APScheduler Setup
 scheduler = BackgroundScheduler()
 
@@ -95,6 +108,12 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN youtube_enabled BOOLEAN DEFAULT 0'))
+        db.session.execute(text('ALTER TABLE settings ADD COLUMN youtube_token TEXT DEFAULT ""'))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -139,7 +158,7 @@ def _schedule_bot_job(settings):
 # --- Auth Middleware ---
 @app.before_request
 def require_login():
-    allowed = ['login', 'google_login', 'authorize', 'static']
+    allowed = ['login', 'google_login', 'authorize', 'youtube_connect', 'youtube_callback', 'static']
     if request.endpoint not in allowed and 'user' not in session:
         return redirect(url_for('login'))
 
@@ -176,6 +195,33 @@ def authorize():
 def logout():
     session.pop('user', None)
     return redirect(url_for('login'))
+
+# --- YouTube OAuth ---
+@app.route('/youtube_connect')
+def youtube_connect():
+    scheme = 'http' if request.host.startswith('localhost') else 'https'
+    redirect_uri = url_for('youtube_callback', _external=True, _scheme=scheme)
+    return youtube_oauth.authorize_redirect(redirect_uri)
+
+@app.route('/youtube_callback')
+def youtube_callback():
+    try:
+        token = youtube_oauth.authorize_access_token()
+        import json
+        settings = Settings.query.first()
+        if settings:
+            settings.youtube_token = json.dumps({
+                'access_token': token.get('access_token'),
+                'refresh_token': token.get('refresh_token'),
+                'token_type': token.get('token_type'),
+                'expires_at': token.get('expires_at'),
+            })
+            settings.youtube_enabled = True
+            db.session.commit()
+        return redirect(url_for('settings'))
+    except Exception as e:
+        import traceback
+        return f"YouTube auth error: {str(e)}<pre>{traceback.format_exc()}</pre>", 500
 
 # --- Main Routes ---
 @app.route('/')
@@ -277,6 +323,9 @@ def settings():
             peak_hours_val = request.form.get('peak_hours', '')
             if peak_hours_val is not None:
                 settings_obj.peak_hours = peak_hours_val
+            
+            # YouTube
+            settings_obj.youtube_enabled = 'youtube_enabled' in request.form
             
             db.session.commit()
             
