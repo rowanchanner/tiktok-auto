@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-terminal"></i> Live Console</h1>
+
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <p style="color: var(--text-muted); margin: 0;">Real-time bot logs (auto-refreshes every 3 seconds)</p>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span id="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Live</span>
+            <button onclick="clearConsole()" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239,68,68,0.2); color: #f87171;">Clear</button>
+            <button onclick="toggleScroll()" id="scroll-btn" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">Auto-scroll: ON</button>
+        </div>
+    </div>
+    <div id="console" style="
+        background: #0a0e1a;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        height: 70vh;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #a0aec0;
+    ">Loading logs...</div>
+</div>
+
+<style>
+    .log-info { color: #60a5fa; }
+    .log-warning { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    .log-success { color: #34d399; }
+    .log-time { color: #64748b; }
+    .log-account { color: #c084fc; font-weight: 600; }
+</style>
+
+<script>
+var autoScroll = true;
+var consoleEl = document.getElementById('console');
+
+function toggleScroll() {
+    autoScroll = !autoScroll;
+    document.getElementById('scroll-btn').textContent = 'Auto-scroll: ' + (autoScroll ? 'ON' : 'OFF');
+}
+
+function clearConsole() {
+    consoleEl.innerHTML = '';
+}
+
+function colorize(text) {
+    return text
+        .replace(/(\d{2}:\d{2}:\d{2})/g, '<span class="log-time">$1</span>')
+        .replace(/(ERROR.*)/g, '<span class="log-error">$1</span>')
+        .replace(/(WARNING.*)/g, '<span class="log-warning">$1</span>')
+        .replace(/(✅|🎉|Upload successful|Posted to)/g, '<span class="log-success">$&</span>')
+        .replace(/(@\w+)/g, '<span class="log-account">$1</span>')
+        .replace(/(━+|═+|─+)/g, '<span style="color:#475569;">$1</span>')
+        .replace(/(📊|📺|⬇️|📤|🛡️|🔥|📋|🎬|📐|⚡|🕐)/g, '$&');
+}
+
+function fetchLogs() {
+    fetch('/logs_api')
+        .then(r => r.text())
+        .then(text => {
+            consoleEl.innerHTML = colorize(text);
+            if (autoScroll) {
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            }
+        })
+        .catch(err => {
+            consoleEl.innerHTML += '\n<span class="log-error">Failed to fetch logs</span>';
+        });
+}
+
+fetchLogs();
+setInterval(fetchLogs, 3000);
+</script>
+{% endblock %}

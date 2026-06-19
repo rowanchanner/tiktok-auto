@@ -11,18 +11,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def upload_to_youtube(video_path: str, title: str, description: str, hashtags: list = None) -> bool:
+def upload_to_youtube(video_path: str, title: str, description: str, hashtags: list = None):
     """
     Upload a video to YouTube as a Short.
     
-    Args:
-        video_path: Path to the video file
-        title: Video title
-        description: Video description
-        hashtags: List of hashtags to add
-    
     Returns:
-        True if successful, False otherwise
+        video_id string if successful, None otherwise
     """
     try:
         from googleapiclient.discovery import build
@@ -36,12 +30,28 @@ def upload_to_youtube(video_path: str, title: str, description: str, hashtags: l
             settings = Settings.query.first()
             if not settings or not settings.youtube_enabled:
                 logger.debug("YouTube upload disabled in settings")
-                return False
+                return None
             if not settings.youtube_token:
                 logger.warning("⚠️  YouTube token not set — connect your YouTube account in Settings")
-                return False
+                return None
             
             token_data = json.loads(settings.youtube_token)
+        
+        # Check video duration — Shorts MUST be under 60 seconds
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                 '-of', 'default=noprint_wrappers=1:nokey=1', video_path],
+                capture_output=True, text=True, timeout=10
+            )
+            duration = float(result.stdout.strip())
+            if duration > 60:
+                logger.warning(f"⚠️  Video is {duration:.0f}s — too long for YouTube Shorts (max 60s). Skipping.")
+                return None
+            logger.info(f"📐 Video duration: {duration:.0f}s (valid for Shorts)")
+        except Exception as e:
+            logger.warning(f"Could not check duration: {e} — uploading anyway")
         
         # Build credentials from stored token
         creds = Credentials(
@@ -62,15 +72,18 @@ def upload_to_youtube(video_path: str, title: str, description: str, hashtags: l
         
         full_description = f"{description}{tag_string}\n\n#Shorts"
         
-        # Truncate title to 100 chars (YouTube limit)
-        if len(title) > 100:
-            title = title[:97] + "..."
+        # CRITICAL: Add #Shorts to title — YouTube uses this to classify as Short
+        if '#Shorts' not in title and '#shorts' not in title:
+            max_title_len = 100 - len(' #Shorts') 
+            if len(title) > max_title_len:
+                title = title[:max_title_len - 3] + '...'
+            title = f"{title} #Shorts"
         
         body = {
             'snippet': {
                 'title': title,
                 'description': full_description,
-                'tags': [t.lstrip('#') for t in (hashtags or [])][:15],
+                'tags': [t.lstrip('#') for t in (hashtags or [])][:15] + ['Shorts'],
                 'categoryId': '22',  # People & Blogs
             },
             'status': {
@@ -86,7 +99,7 @@ def upload_to_youtube(video_path: str, title: str, description: str, hashtags: l
             chunksize=1024 * 1024  # 1MB chunks
         )
         
-        logger.info("📺 Uploading to YouTube Shorts...")
+        logger.info(f"📺 Uploading to YouTube Shorts: \"{title}\"")
         request = youtube.videos().insert(
             part=','.join(body.keys()),
             body=body,
@@ -96,7 +109,7 @@ def upload_to_youtube(video_path: str, title: str, description: str, hashtags: l
         response = request.execute()
         video_id = response.get('id')
         logger.info(f"✅ YouTube Short uploaded! https://youtube.com/shorts/{video_id}")
-        return video_id  # return ID so caller can build URL
+        return video_id
         
     except Exception as e:
         logger.error(f"❌ YouTube upload failed: {e}")

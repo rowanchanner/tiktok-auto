@@ -407,6 +407,10 @@ def toggle_bot():
         db.session.commit()
     return redirect(url_for('dashboard'))
 
+@app.route('/console')
+def console():
+    return render_template('console.html', user=session.get('user'))
+
 @app.route('/logs_api')
 def logs_api():
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot.log")
@@ -415,7 +419,7 @@ def logs_api():
     try:
         with open(log_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
-            return "".join(lines[-100:])
+            return "".join(lines[-200:])
     except Exception as e:
         return f"Error: {str(e)}"
 
