@@ -17,8 +17,25 @@
                 <input type="text" id="watermark_text" name="watermark_text" class="form-control" value="{{ settings.watermark_text or 'Follow [username] for more!' }}" oninput="updatePreview()" placeholder="Follow [username] for more!">
             </div>
 
+            <!-- Animation Type -->
             <div class="form-group">
-                <label>Position</label>
+                <label>Animation</label>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                    {% set animations = [('static','🔒 Static','Stays in place'),('bounce','📀 DVD Bounce','Bounces off edges'),('scroll','📜 Scroll','Moves left to right'),('pulse','💫 Pulse','Fades in and out')] %}
+                    {% for val, icon, desc in animations %}
+                    <label class="anim-opt" data-val="{{ val }}" style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0.75rem 0.5rem; background: rgba(0,0,0,0.2); border-radius: 0.5rem; cursor: pointer; border: 2px solid {% if (settings.watermark_animation or 'static') == val %}var(--primary-color){% else %}var(--border-color){% endif %}; transition: border-color 0.15s; text-align: center;">
+                        <input type="radio" name="watermark_animation" value="{{ val }}" {% if (settings.watermark_animation or 'static') == val %}checked{% endif %} onchange="updatePreview()" style="display:none;">
+                        <span style="font-size: 1.1rem;">{{ icon.split(' ')[0] }}</span>
+                        <span style="font-size: 0.8rem; font-weight: 600;">{{ icon.split(' ')[1] }}</span>
+                        <span style="font-size: 0.65rem; color: var(--text-muted);">{{ desc }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Position -->
+            <div class="form-group">
+                <label>Position <span style="color:var(--text-muted); font-size:0.75rem;">(ignored for DVD Bounce)</span></label>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
                     {% set positions = [('top-left','↖ Top Left'),('top-center','↑ Top Center'),('top-right','↗ Top Right'),('bottom-left','↙ Bottom Left'),('bottom-center','↓ Bottom Center'),('bottom-right','↘ Bottom Right')] %}
                     {% for val, label in positions %}
@@ -53,7 +70,7 @@
         <!-- Per-account overrides -->
         <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
             <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-users"></i> Per-Account Watermarks</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Leave blank to use the global watermark above. Use <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.3rem;border-radius:3px;">[username]</code> for auto-replacement.</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Leave blank = global watermark. Use <code style="background:rgba(0,0,0,0.3);padding:0.1rem 0.3rem;border-radius:3px;">[username]</code> for auto-replacement.</p>
             {% for account in accounts %}
             <form method="POST" action="/watermark" style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 0.75rem;">
                 <input type="hidden" name="account_id" value="{{ account.id }}">
@@ -126,31 +143,93 @@
     </div>
 </div>
 
+<style>
+@keyframes dvd-bounce {
+    0%   { top: 30px; left: 12px; }
+    25%  { top: 30px; right: 12px; left: auto; }
+    50%  { bottom: 120px; right: 12px; left: auto; top: auto; }
+    75%  { bottom: 120px; left: 12px; top: auto; right: auto; }
+    100% { top: 30px; left: 12px; }
+}
+@keyframes wm-bounce {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(180px, 0); }
+    50%  { transform: translate(180px, 300px); }
+    75%  { transform: translate(0, 300px); }
+    100% { transform: translate(0, 0); }
+}
+@keyframes wm-scroll {
+    0%   { transform: translateX(300px); }
+    100% { transform: translateX(-100%); }
+}
+@keyframes wm-pulse {
+    0%, 100% { opacity: 0.3; }
+    50%      { opacity: 1; }
+}
+</style>
+
 <script>
 function updatePreview() {
     var text = document.getElementById('watermark_text').value;
     var position = document.querySelector('input[name="watermark_position"]:checked').value;
+    var animation = document.querySelector('input[name="watermark_animation"]:checked').value;
     var fontSize = document.getElementById('watermark_font_size').value;
     var opacity = document.getElementById('watermark_opacity').value;
     var color = document.getElementById('watermark_color').value;
     var username = document.getElementById('preview-account').value;
     var enabled = document.getElementById('watermark_enabled').checked;
 
-    // Update username display
     document.getElementById('preview-username').textContent = username;
 
     var overlay = document.getElementById('watermark-overlay');
     var resolved = text.replace(/\[username\]/g, '@' + username);
     overlay.textContent = resolved;
-    overlay.style.fontSize = (fontSize * 0.6) + 'px'; // Scale for preview
-    overlay.style.opacity = enabled ? opacity : '0.2';
+    overlay.style.fontSize = (fontSize * 0.6) + 'px';
     overlay.style.color = color;
 
-    // Position mapping
+    // Clear all animations and positioning
+    overlay.style.animation = 'none';
     overlay.style.top = overlay.style.bottom = overlay.style.left = overlay.style.right = 'auto';
     overlay.style.transform = 'none';
     overlay.style.textAlign = 'left';
+    overlay.style.opacity = enabled ? opacity : '0.2';
 
+    if (animation === 'bounce') {
+        overlay.style.top = '30px';
+        overlay.style.left = '12px';
+        overlay.style.animation = 'wm-bounce 4s linear infinite';
+        overlay.style.opacity = enabled ? opacity : '0.2';
+    } else if (animation === 'scroll') {
+        // Position based on top/bottom from position setting
+        if (position.includes('top')) {
+            overlay.style.top = '30px';
+        } else {
+            overlay.style.bottom = '120px';
+        }
+        overlay.style.left = '0';
+        overlay.style.animation = 'wm-scroll 3s linear infinite';
+    } else if (animation === 'pulse') {
+        // Use position for placement, add pulse
+        setStaticPosition(overlay, position);
+        overlay.style.animation = 'wm-pulse 2s ease-in-out infinite';
+    } else {
+        // Static
+        setStaticPosition(overlay, position);
+    }
+
+    // Highlight selected animation
+    document.querySelectorAll('.anim-opt').forEach(function(el) {
+        var isSelected = el.querySelector('input').checked;
+        el.style.borderColor = isSelected ? 'var(--primary-color)' : 'var(--border-color)';
+    });
+
+    // Highlight selected position
+    document.querySelectorAll('input[name="watermark_position"]').forEach(function(r) {
+        r.parentElement.style.borderColor = r.checked ? 'var(--primary-color)' : 'var(--border-color)';
+    });
+}
+
+function setStaticPosition(overlay, position) {
     switch(position) {
         case 'top-left':
             overlay.style.top = '30px'; overlay.style.left = '12px'; break;
@@ -165,11 +244,6 @@ function updatePreview() {
         case 'bottom-right':
             overlay.style.bottom = '120px'; overlay.style.right = '12px'; overlay.style.textAlign = 'right'; break;
     }
-
-    // Highlight selected position radio
-    document.querySelectorAll('input[name="watermark_position"]').forEach(function(r) {
-        r.parentElement.style.borderColor = r.checked ? 'var(--primary-color)' : 'var(--border-color)';
-    });
 }
 
 updatePreview();

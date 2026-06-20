@@ -144,6 +144,11 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text("ALTER TABLE settings ADD COLUMN watermark_animation TEXT DEFAULT 'static'"))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
@@ -437,6 +442,7 @@ def watermark():
             settings_obj.watermark_enabled = 'watermark_enabled' in request.form
             settings_obj.watermark_text = request.form.get('watermark_text', 'Follow [username] for more!')
             settings_obj.watermark_position = request.form.get('watermark_position', 'bottom-center')
+            settings_obj.watermark_animation = request.form.get('watermark_animation', 'static')
             settings_obj.watermark_font_size = int(request.form.get('watermark_font_size', 24))
             settings_obj.watermark_opacity = float(request.form.get('watermark_opacity', 0.8))
             settings_obj.watermark_color = request.form.get('watermark_color', '#ffffff')
