@@ -4,13 +4,24 @@
 <h1 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-terminal"></i> Live Console</h1>
 
 <div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <p style="color: var(--text-muted); margin: 0;">Real-time bot logs (auto-refreshes every 3 seconds)</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <p style="color: var(--text-muted); margin: 0;">Real-time bot logs (auto-refreshes every 3s)</p>
+        </div>
         <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <span id="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
-            <span style="color: var(--text-muted); font-size: 0.8rem;">Live</span>
-            <button onclick="clearConsole()" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(239,68,68,0.2); color: #f87171;">Clear</button>
-            <button onclick="toggleScroll()" id="scroll-btn" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;">Auto-scroll: ON</button>
+            <!-- Pipeline status indicator -->
+            <div id="pipeline-status" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
+                <span id="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #64748b;"></span>
+                <span id="status-text">Idle</span>
+            </div>
+            
+            <!-- Force Stop Button -->
+            <button id="force-stop-btn" onclick="forceStop()" class="btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3); display: none;">
+                <i class="fa-solid fa-stop"></i> Force Stop
+            </button>
+
+            <button onclick="clearConsole()" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(255,255,255,0.05);">Clear</button>
+            <button onclick="toggleScroll()" id="scroll-btn" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: rgba(255,255,255,0.05);">Auto-scroll: ON</button>
         </div>
     </div>
     <div id="console" style="
@@ -36,6 +47,19 @@
     .log-success { color: #34d399; }
     .log-time { color: #64748b; }
     .log-account { color: #c084fc; font-weight: 600; }
+    
+    @keyframes pulse-red {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+    .status-running #status-dot {
+        background: #10b981 !important;
+        animation: pulse-red 1.5s ease-in-out infinite;
+    }
+    .status-stopping #status-dot {
+        background: #fbbf24 !important;
+        animation: pulse-red 0.5s ease-in-out infinite;
+    }
 </style>
 
 <script>
@@ -59,7 +83,49 @@ function colorize(text) {
         .replace(/(✅|🎉|Upload successful|Posted to)/g, '<span class="log-success">$&</span>')
         .replace(/(@\w+)/g, '<span class="log-account">$1</span>')
         .replace(/(━+|═+|─+)/g, '<span style="color:#475569;">$1</span>')
-        .replace(/(📊|📺|⬇️|📤|🛡️|🔥|📋|🎬|📐|⚡|🕐)/g, '$&');
+        .replace(/(🛑.*)/g, '<span class="log-error">$1</span>')
+        .replace(/(⏰.*)/g, '<span class="log-warning">$1</span>');
+}
+
+function forceStop() {
+    if (!confirm('Force stop the running pipeline? It will abort after the current step finishes.')) return;
+    fetch('/force_stop', { method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'} })
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('force-stop-btn').textContent = '⏳ Stopping...';
+            document.getElementById('force-stop-btn').disabled = true;
+        });
+}
+
+function checkStatus() {
+    fetch('/bot_status')
+        .then(r => r.json())
+        .then(d => {
+            var el = document.getElementById('pipeline-status');
+            var btn = document.getElementById('force-stop-btn');
+            var txt = document.getElementById('status-text');
+            
+            if (d.stop_signalled && d.running) {
+                el.className = 'status-stopping';
+                txt.textContent = 'Stopping...';
+                txt.style.color = '#fbbf24';
+                btn.style.display = 'none';
+            } else if (d.running) {
+                el.className = 'status-running';
+                txt.textContent = 'Pipeline Running';
+                txt.style.color = '#34d399';
+                btn.style.display = 'inline-flex';
+                btn.textContent = '⬛ Force Stop';
+                btn.disabled = false;
+            } else {
+                el.className = '';
+                txt.textContent = 'Idle';
+                txt.style.color = '#64748b';
+                document.getElementById('status-dot').style.background = '#64748b';
+                btn.style.display = 'none';
+            }
+        })
+        .catch(() => {});
 }
 
 function fetchLogs() {
@@ -77,6 +143,8 @@ function fetchLogs() {
 }
 
 fetchLogs();
+checkStatus();
 setInterval(fetchLogs, 3000);
+setInterval(checkStatus, 3000);
 </script>
 {% endblock %}

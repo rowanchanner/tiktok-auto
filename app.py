@@ -56,11 +56,22 @@ youtube_oauth = oauth.register(
 # APScheduler Setup
 scheduler = BackgroundScheduler()
 
+# Global stop flag — pipeline checks this between steps
+import threading
+bot_stop_event = threading.Event()
+bot_running_lock = threading.Lock()
+bot_running_thread = None
+
 def bot_job():
+    global bot_running_thread
     with app.app_context():
         import logging
         logger = logging.getLogger("bot")
-        logger.info("⚡ Run Now triggered! Checking settings...")
+        
+        # Clear any previous stop signal
+        bot_stop_event.clear()
+        
+        logger.info("⚡ Scheduled run triggered! Checking settings...")
         try:
             settings = Settings.query.first()
             if settings and not settings.is_running:
@@ -70,13 +81,43 @@ def bot_job():
             active_accounts = [acc.username for acc in TikTokAccount.query.filter_by(is_active=True).all()]
             if not active_accounts:
                 logger.error("No active TikTok accounts found! Add one in Settings.")
-            else:
-                logger.info(f"Found active accounts: {active_accounts}")
-            bot_main.run_pipeline(dry_run=False, active_accounts=active_accounts)
+                return
+            logger.info(f"Found active accounts: {active_accounts}")
+            
+            # Run pipeline in a sub-thread with 7-minute timeout
+            result = [None]
+            def run_with_context():
+                with app.app_context():
+                    try:
+                        result[0] = bot_main.run_pipeline(
+                            dry_run=False,
+                            active_accounts=active_accounts,
+                            stop_event=bot_stop_event
+                        )
+                    except Exception as e:
+                        logger.error(f"Pipeline error: {e}")
+            
+            t = threading.Thread(target=run_with_context, daemon=True)
+            bot_running_thread = t
+            t.start()
+            t.join(timeout=420)  # 7 minutes
+            
+            if t.is_alive():
+                logger.error("⏰ Pipeline TIMED OUT after 7 minutes! Signalling stop...")
+                bot_stop_event.set()
+                t.join(timeout=30)  # Give it 30s to clean up
+                if t.is_alive():
+                    logger.error("⚠️  Pipeline thread did not stop cleanly. It will be abandoned.")
+                else:
+                    logger.info("Pipeline stopped after timeout signal.")
+            
+            bot_running_thread = None
+            
         except Exception as e:
             import traceback
             logger.error(f"Error in background bot job: {str(e)}")
             logger.error(traceback.format_exc())
+            bot_running_thread = None
 
 @app.before_request
 def initialize_db():
@@ -422,6 +463,22 @@ def toggle_bot():
         settings.is_running = not settings.is_running
         db.session.commit()
     return redirect(url_for('dashboard'))
+
+@app.route('/force_stop', methods=['POST'])
+def force_stop():
+    import logging
+    logger = logging.getLogger("bot")
+    bot_stop_event.set()
+    logger.warning("🛑 FORCE STOP triggered by user! Pipeline will abort after current step.")
+    # Return JSON for AJAX or redirect for form
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return {'status': 'stop_signalled'}
+    return redirect(url_for('console'))
+
+@app.route('/bot_status')
+def bot_status():
+    is_running = bot_running_thread is not None and bot_running_thread.is_alive()
+    return {'running': is_running, 'stop_signalled': bot_stop_event.is_set()}
 
 @app.route('/watermark', methods=['GET', 'POST'])
 def watermark():

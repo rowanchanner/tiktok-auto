@@ -77,12 +77,18 @@ setup_logging()
 
 # ─── Global Objects ─────────────────────────────────────────────────────────────────────────────
 
-def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
+def run_pipeline(dry_run: bool = False, active_accounts: list = None, stop_event=None) -> bool:
     """Run the complete discovery -> download -> upload pipeline for ALL accounts sequentially."""
     logger.info("============================================================")
     
     if not active_accounts:
         active_accounts = [getattr(config, "TIKTOK_ACCOUNT", "rowanoutdoors")]
+    
+    def should_stop():
+        if stop_event and stop_event.is_set():
+            logger.warning("🛑 Stop signal received! Aborting pipeline.")
+            return True
+        return False
         
     posts_today = tracker.get_posted_count_today()
     max_posts = getattr(config, "MAX_POSTS_PER_DAY", 15)
@@ -95,6 +101,9 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
     any_success = False
     
     for account_name in active_accounts:
+        if should_stop():
+            break
+            
         logger.info("")
         logger.info(f"━━━ Processing account: @{account_name} ━━━")
         
@@ -128,6 +137,7 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
                 continue
         
         # Step 1: Discover
+        if should_stop(): break
         logger.info("─── Step 1: Discovering viral movie clips ───")
         video_info = discover_video(custom_hashtags=account_hashtags)
         if not video_info:
@@ -135,6 +145,7 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
             continue
 
         # Step 2: Download
+        if should_stop(): break
         logger.info("─── Step 2: Downloading video ───")
         download_result = download_video(video_info)
         if not download_result:
@@ -152,6 +163,7 @@ def run_pipeline(dry_run: bool = False, active_accounts: list = None) -> bool:
                 logger.warning(f"Watermark skipped: {e}")
 
         # Step 3: Upload based on post_to setting
+        if should_stop(): break
         tiktok_success = False
         youtube_success = False
         
