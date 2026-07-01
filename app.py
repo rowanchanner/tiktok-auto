@@ -17,7 +17,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-default-key")
 
 # Only this email can log in
-ALLOWED_EMAIL = "rowanchanner2@gmail.com"
+ALLOWED_EMAILS = ["rowanchanner2@gmail.com", "ryanbailey584@gmail.com"]
 
 # Database setup — use persistent disk if available
 DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.path.dirname(os.path.abspath(__file__))
@@ -268,7 +268,7 @@ def authorize():
         if not user_info:
             resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo')
             user_info = resp.json()
-        if user_info.get('email') != ALLOWED_EMAIL:
+        if user_info.get('email') not in ALLOWED_EMAILS:
             return "Unauthorized. This dashboard is locked.", 403
         session['user'] = user_info
         return redirect(url_for('dashboard'))

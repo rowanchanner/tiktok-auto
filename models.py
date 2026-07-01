@@ -51,3 +51,4 @@ class TikTokAccount(db.Model):
     max_posts_per_day = db.Column(db.Integer, default=0)  # 0 = use global
     post_to = db.Column(db.String(20), default='tiktok')  # tiktok, both, youtube
     watermark_text = db.Column(db.Text, default='')  # blank = use global watermark
+    clone_source = db.Column(db.Text, default='')  # TikTok profile URL to clone from (blank = normal discovery)
