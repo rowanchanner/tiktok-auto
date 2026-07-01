@@ -190,6 +190,11 @@ def initialize_db():
         db.session.commit()
     except:
         db.session.rollback()
+    try:
+        db.session.execute(text("ALTER TABLE tik_tok_account ADD COLUMN clone_source TEXT DEFAULT ''"))
+        db.session.commit()
+    except:
+        db.session.rollback()
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     persist_dir = '/var/data' if os.path.exists('/var/data') else os.path.join(base_dir, 'data')
